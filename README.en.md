@@ -98,6 +98,7 @@ The end of the update check is detected by any of these:
 - 🟢 **Colored status icon.** Shows the state at a glance.
 - 📥 **Installs Discord for you** if it isn't installed.
 - 🔧 **Heals dropped connections.** Tests the connection every minute. If it drops, it first checks DNS and other GoodbyeDPI instances, then restarts ByeDPI; if that isn't enough, it tries 12 ByeDPI settings and saves the one that works.
+- 🛟 **GoodbyeDPI mode.** If no ByeDPI setting works on your connection, the launcher can (after asking) switch to a mode that runs Discord through GoodbyeDPI, clearly stating the risk of conflicts with games.
 - 🌍 **Adapts to different ISPs.** If the startup update check doesn't get through, it tries the settings from the GoodbyeDPI-Turkey package (main setting + 6 Superonline alternatives) one by one and remembers the one that works.
 - 📝 **Event log.** Writes drops, automatic fixes and errors to `baslatici.log`.
 - 🛡️ **Restarts ByeDPI** if it crashes.
@@ -258,6 +259,7 @@ I also recommend turning on **"Minimize to tray"** in the same place.
 | **DNS → DNS ayarını kontrol et / yap** | Check / set up DNS | Checks whether DNS resolves Discord correctly; switches to encrypted DNS if needed |
 | **DNS → Eski haline döndür** | Restore previous | Restores your DNS settings from before the launcher changed them |
 | **Bilgisayar açılınca başlat** | Start with Windows | Turns autostart on/off |
+| **GoodbyeDPI modu** | GoodbyeDPI mode | Runs Discord through GoodbyeDPI if ByeDPI doesn't work on your connection. GoodbyeDPI stays on, so it may conflict with some games. |
 | **Sessiz mod** | Quiet mode | Shows only warnings and errors |
 | **Her şeyi kapat** | Close everything | Closes Discord, ByeDPI and GoodbyeDPI and exits the launcher |
 
@@ -299,6 +301,7 @@ When autostart is turned on, a small **finder** script is placed in `%LocalAppDa
 | File | Location | Purpose |
 |---|---|---|
 | `byedpi_ayar.txt` | `byedpi\` | The working ByeDPI setting found automatically |
+| `goodbyedpi_modu.txt` | `byedpi\` | If present, GoodbyeDPI mode is on |
 | `goodbyedpi_ayar.txt` | `byedpi\` | The GoodbyeDPI setting that worked for the update check (if different from the default) |
 | `sessiz_mod.txt` | `byedpi\` | If present, quiet mode is on |
 | `baslatici.log` | `byedpi\` | Event log: connection drops, automatic fixes and errors. Open it with **"Kayıtları aç"** (Open log) in the menu. |

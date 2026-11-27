@@ -96,6 +96,7 @@ Güncelleme kontrolünün bittiği şu yollardan biriyle anlaşılıyor:
 - 🟢 **Renkli durum simgesi.** Durumu bir bakışta gösteriyor.
 - 📥 **Discord kurulu değilse** kendisi indirip kuruyor.
 - 🔧 **Bağlantı koparsa kendini düzeltiyor.** Her dakika bağlantıyı test ediyor. Koparsa önce DNS'e ve arka plandaki başka GoodbyeDPI'lara bakıyor, sonra ByeDPI'ı yeniden başlatıyor, yetmezse 12 farklı ByeDPI ayarını deneyip çalışanı kaydediyor.
+- 🛟 **GoodbyeDPI modu.** ByeDPI'ın hiçbir ayarı senin bağlantında çalışmazsa, başlatıcı sorup Discord'u GoodbyeDPI ile çalıştıran moda geçebiliyor (oyunlarla çakışma riski açıkça belirtilerek).
 - 🌍 **Farklı internet sağlayıcılarına uyum.** Açılıştaki güncelleme kontrolü geçmezse GoodbyeDPI-Turkey paketindeki ayarları (ana ayar + 6 Superonline alternatifi) sırayla deniyor ve çalışanı hatırlıyor.
 - 📝 **Olay kayıtları.** Kopmaları, otomatik düzeltmeleri ve hataları `baslatici.log` dosyasına yazıyor.
 - 🛡️ **ByeDPI çökerse** kendiliğinden yeniden başlatıyor.
@@ -256,6 +257,7 @@ Başlatıcı simgesine **sol tıklayınca** tepsideki Discord penceresi öne gel
 | **DNS → DNS ayarını kontrol et / yap** | DNS'in Discord'u doğru adrese çözüp çözmediğine bakar, gerekirse şifreli DNS'e geçirir |
 | **DNS → Eski haline döndür** | DNS ayarını başlatıcı değiştirmeden önceki haline getirir |
 | **Bilgisayar açılınca başlat** | Otomatik başlatmayı açar/kapatır |
+| **GoodbyeDPI modu** | ByeDPI senin bağlantında çalışmıyorsa Discord'u GoodbyeDPI ile çalıştırır. GoodbyeDPI açık kaldığı için bazı oyunlarla çakışabilir. |
 | **Sessiz mod** | Sadece uyarı ve hata bildirimlerini gösterir |
 | **Her şeyi kapat** | Discord, ByeDPI ve GoodbyeDPI'ı kapatıp başlatıcıdan çıkar |
 
@@ -297,6 +299,7 @@ Otomatik başlatma açıldığında `%LocalAppData%\DiscordBaslatici\` klasörü
 | Dosya | Yer | Ne işe yarar |
 |---|---|---|
 | `byedpi_ayar.txt` | `byedpi\` | Otomatik bulunan, çalışan ByeDPI ayarı |
+| `goodbyedpi_modu.txt` | `byedpi\` | Varsa GoodbyeDPI modu açık |
 | `goodbyedpi_ayar.txt` | `byedpi\` | Güncelleme kontrolünde çalışan GoodbyeDPI ayarı (varsayılandan farklıysa) |
 | `sessiz_mod.txt` | `byedpi\` | Varsa sessiz mod açık |
 | `baslatici.log` | `byedpi\` | Olay kayıtları: bağlantı kopmaları, otomatik düzeltmeler ve hatalar. Menüden **"Kayıtları aç"** ile açılır. |
