@@ -1257,20 +1257,9 @@ $script:tikCalisiyor   = $false
 $script:byedpiCokmeler = @()
 $script:byedpiDurdu    = $false
 
-$zamanlayici.add_Tick({
-    # Bir önceki tur henüz bitmediyse (soru penceresi açık, ayar aranıyor vb.) bu turu atla.
-    # Yoksa iç içe çalışan turlar aynı soruyu tekrar tekrar sorabiliyor ya da birbirini bozuyordu.
-    if ($script:tikCalisiyor) { return }
-    $script:tikCalisiyor = $true
-    try {
-        ZamanlayiciTuru
-    }
-    finally {
-        $script:tikCalisiyor = $false
-    }
-})
-
-function ZamanlayiciTuru {
+# Her saniye çalışan tur. Fonksiyon yerine doğrudan blok olarak saklanıyor; zamanlayıcı onu
+# isimle aramadan çağırıyor (isimle aramak bazı durumlarda sessizce başarısız olabiliyor).
+$script:zamanlayiciTuru = {
     $script:tik++
     $script:sayac++
 
@@ -1435,6 +1424,42 @@ function ZamanlayiciTuru {
         }
     }
 }
+
+$script:sonTurHatasi = $null
+$script:yazilanTurHatalari = @{}
+$zamanlayici.add_Tick({
+    # Bir önceki tur henüz bitmediyse (soru penceresi açık, ayar aranıyor vb.) bu turu atla.
+    # Yoksa iç içe çalışan turlar aynı soruyu tekrar tekrar sorabiliyor ya da birbirini bozuyordu.
+    if ($script:tikCalisiyor) { return }
+    $script:tikCalisiyor = $true
+    try {
+        if ($script:tik -eq 0) { Kaydet 'Zamanlayıcı çalışmaya başladı' }
+        & $script:zamanlayiciTuru
+    }
+    catch {
+        # Turda oluşan hatayı kayda yaz (aynı hatayı her saniye tekrar tekrar yazma)
+        $mesaj = "$($_.Exception.Message) (satır $($_.InvocationInfo.ScriptLineNumber))"
+        if ($mesaj -ne $script:sonTurHatasi) {
+            $script:sonTurHatasi = $mesaj
+            Kaydet "HATA [zamanlayıcı] $mesaj"
+        }
+    }
+    finally {
+        # Sessiz moddaki (SilentlyContinue) hatalar catch'e düşmüyor; onları da kayda yaz.
+        # Zararsız "işlem bulunamadı" türlerini atla, aynı hatayı bir kereden fazla yazma.
+        foreach ($h in @($Error)) {
+            if ("$($h.FullyQualifiedErrorId)" -match 'NoProcessFoundForGivenName|PathNotFound|ItemNotFound|CmdletizationQuery_NotFound|NoServiceFoundForGivenName') { continue }
+            $satir = if ($h.InvocationInfo) { $h.InvocationInfo.ScriptLineNumber } else { '?' }
+            $anahtar = "$($h.ToString()) (satır $satir)"
+            if (-not $script:yazilanTurHatalari.ContainsKey($anahtar)) {
+                $script:yazilanTurHatalari[$anahtar] = $true
+                Kaydet "HATA [zamanlayıcı] $anahtar"
+            }
+        }
+        $Error.Clear()
+        $script:tikCalisiyor = $false
+    }
+})
 
 $zamanlayici.Start()
 $script:donguCalisiyor = $true
