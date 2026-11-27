@@ -130,12 +130,21 @@ $script:onAyarlar = @(
 # Yardımcı fonksiyonlar
 # ---------------------------------------------------------------------------
 
+# Bu başlatıcının açtığı goodbyedpi.exe işlemleri (klasör yoluna bakarak ayırt edilir)
+function BizimGoodbyeDpi {
+    if (-not $script:gdpiExe) { return @() }
+    $bizimki = [System.IO.Path]::GetFullPath($script:gdpiExe)
+    return @(Get-Process goodbyedpi | Where-Object { $_.Path -and [System.IO.Path]::GetFullPath($_.Path) -eq $bizimki })
+}
+
 function GoodbyeDpiKapat {
-    if (Get-Process goodbyedpi) {
-        Get-Process goodbyedpi | Stop-Process -Force
+    $bizim = BizimGoodbyeDpi
+    if ($bizim.Count -gt 0) {
+        $bizim | Stop-Process -Force
         Start-Sleep -Milliseconds 1500
     }
-    sc.exe stop WinDivert | Out-Null
+    # Sürücüyü sadece başka bir GoodbyeDPI kullanmıyorsa kapat
+    if (-not (Get-Process goodbyedpi)) { sc.exe stop WinDivert | Out-Null }
 }
 
 function TepsiKaldir {
@@ -166,7 +175,10 @@ function Durum($metin) {
 
 function Bildirim($baslik, $metin, $tur = 'Info') {
     if ($script:sessizMod -and $tur -eq 'Info') { return }
-    if ($script:tepsi) { $script:tepsi.ShowBalloonTip(5000, $baslik, $metin, $tur) }
+    if ($script:tepsi) {
+        $script:sonBildirimBasligi = $baslik
+        $script:tepsi.ShowBalloonTip(5000, $baslik, $metin, $tur)
+    }
 }
 
 # Tepsi simgesini renklendir: 'sari' = bekleniyor, 'yesil' = hazır, 'kirmizi' = sorun
@@ -281,11 +293,11 @@ function ByeDpiAyarBul {
 # --- GoodbyeDPI ---
 
 function GoodbyeDpiAc {
-    if (-not (Get-Process goodbyedpi)) {
+    if ((BizimGoodbyeDpi).Count -eq 0) {
         Start-Process $script:gdpiExe -WorkingDirectory $script:gdpiKlasor -WindowStyle Hidden -ArgumentList "-5 --set-ttl 5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253 --blacklist `"$script:blacklist`""
         Start-Sleep -Seconds 3
     }
-    return [bool](Get-Process goodbyedpi)
+    return ((BizimGoodbyeDpi).Count -gt 0)
 }
 
 # --- Arka planda çalışan başka GoodbyeDPI'lar ---
@@ -409,7 +421,7 @@ function DiscordIndirKur {
     if (-not $indi) { return $false }
 
     Durum 'Discord kuruluyor'
-    Start-Process $kurulum
+    DiscorduNormalYetkiyleAc $kurulum '' 'discord_kurulum.lnk'
 
     # Kurulum bitip Discord kendi kendine açılana kadar bekle (en fazla 3 dakika)
     for ($i = 0; $i -lt 180; $i++) {
@@ -428,9 +440,9 @@ function DiscordIndirKur {
 # Başlatıcı yönetici olarak çalıştığı için doğrudan açılan Discord da yönetici olur; o zaman
 # Gezgin'den Discord'a dosya sürükle-bırak çalışmaz ve bildirimden açılan kopyalar karışır.
 # Bunun için geçici bir kısayol oluşturulup Windows Gezgini (explorer) üzerinden açılır.
-function DiscorduNormalYetkiyleAc($exe, $argumanlar) {
+function DiscorduNormalYetkiyleAc($exe, $argumanlar, $kisayolAdi = 'discord_baslat.lnk') {
     New-Item -ItemType Directory -Path $script:sabitKlasor -Force | Out-Null
-    $lnk = Join-Path $script:sabitKlasor 'discord_baslat.lnk'
+    $lnk = Join-Path $script:sabitKlasor $kisayolAdi
     $kabuk = New-Object -ComObject WScript.Shell
     $kisayol = $kabuk.CreateShortcut($lnk)
     $kisayol.TargetPath       = $exe
@@ -919,6 +931,23 @@ $script:sonGecikme = $null
 # Otomatik başlatma açıksa görevi ve kayıtlı yolu güncelle
 if (OtomatikBaslatVarMi) { OtomatikBaslatAyarla $true }
 
+# Menüden gelen işlemleri güvenle çalıştır:
+# - Açılış henüz bitmediyse (soru penceresi açıkken menüye basılırsa) beklet
+# - Arka plan kontrolü sürüyorsa iç içe çalıştırma
+function MenuIslemi([scriptblock]$islem) {
+    if (-not $script:acilisBitti) {
+        Bildirim 'Biraz bekle' 'Başlatıcı hâlâ açılıyor, bitince tekrar dene.' 'Warning'
+        return
+    }
+    if ($script:tikCalisiyor) {
+        Bildirim 'Biraz bekle' 'Başka bir işlem sürüyor, birkaç saniye sonra tekrar dene.' 'Warning'
+        return
+    }
+    $script:tikCalisiyor = $true
+    try { & $islem }
+    finally { $script:tikCalisiyor = $false }
+}
+
 # Programdan çık: mesaj döngüsü çalışıyorsa onu bitir, açılış sırasındaysa işlemi doğrudan sonlandır
 function Cik {
     if ($script:donguCalisiyor) {
@@ -1019,7 +1048,7 @@ $menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
 $menu.add_Opening({ BaglantiBilgisiGuncelle })
 
 $yenidenOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Discord'u yeniden başlat")
-$yenidenOgesi.add_Click({ Kaydet "Discord yeniden başlatılıyor (kullanıcı isteği)"; DiscordBaslat })
+$yenidenOgesi.add_Click({ MenuIslemi { Kaydet "Discord yeniden başlatılıyor (kullanıcı isteği)"; DiscordBaslat } })
 $menu.Items.Add($yenidenOgesi) | Out-Null
 
 $programOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Programı yeniden başlat')
@@ -1032,13 +1061,13 @@ $ayarBulOgesi.add_Click({
         Bildirim 'Biraz bekle' "Discord açılıp hazır olduktan sonra tekrar dene." 'Warning'
     }
     else {
-        ByeDpiAyarBul | Out-Null
+        MenuIslemi { ByeDpiAyarBul | Out-Null }
     }
 })
 $menu.Items.Add($ayarBulOgesi) | Out-Null
 
 $denetleOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Güncellemeleri denetle (sürüm v$SURUM)")
-$denetleOgesi.add_Click({ GuncellemeKontrol -Elle })
+$denetleOgesi.add_Click({ MenuIslemi { GuncellemeKontrol -Elle } })
 $menu.Items.Add($denetleOgesi) | Out-Null
 
 $kayitOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Kayıtları aç')
@@ -1049,28 +1078,30 @@ $kayitOgesi.add_Click({
 $menu.Items.Add($kayitOgesi) | Out-Null
 
 $disGdpiOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Arka plandaki GoodbyeDPI'ı kapat")
-$disGdpiOgesi.add_Click({ DisGoodbyeDpiKontrol -Elle })
+$disGdpiOgesi.add_Click({ MenuIslemi { DisGoodbyeDpiKontrol -Elle } })
 $menu.Items.Add($disGdpiOgesi) | Out-Null
 
 $onarOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Sürücü hatasını onar')
-$onarOgesi.add_Click({ SurucuOnar })
+$onarOgesi.add_Click({ MenuIslemi { SurucuOnar } })
 $menu.Items.Add($onarOgesi) | Out-Null
 
 $dnsOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('DNS')
 
 $dnsKontrolOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('DNS ayarını kontrol et / yap')
 $dnsKontrolOgesi.add_Click({
-    if (DnsDogruMu) {
-        Bildirim 'DNS doğru' 'Discord adresi doğru çözülüyor, bir şey yapmaya gerek yok.'
-    }
-    else {
-        DnsAyarlaSorarak | Out-Null
+    MenuIslemi {
+        if (DnsDogruMu) {
+            Bildirim 'DNS doğru' 'Discord adresi doğru çözülüyor, bir şey yapmaya gerek yok.'
+        }
+        else {
+            DnsAyarlaSorarak | Out-Null
+        }
     }
 })
 $dnsOgesi.DropDownItems.Add($dnsKontrolOgesi) | Out-Null
 
 $dnsGeriOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Eski haline döndür')
-$dnsGeriOgesi.add_Click({
+$dnsGeriOgesi.add_Click({ MenuIslemi {
     $cevap = [MesajKutusu]::Goster(
         "DNS ayarın, başlatıcının değiştirmeden önceki haline döndürülsün mü?`n`nDiscord bundan sonra bağlanamayabilir.",
         'Discord Başlatıcı', 'YesNo', 'Question')
@@ -1083,7 +1114,7 @@ $dnsGeriOgesi.add_Click({
             Bildirim 'Yedek yok' 'Başlatıcı DNS ayarını hiç değiştirmemiş.' 'Warning'
         }
     }
-})
+} })
 $dnsOgesi.DropDownItems.Add($dnsGeriOgesi) | Out-Null
 
 # Alt menü açılınca "Eski haline döndür" sadece yedek varsa aktif olsun
@@ -1132,7 +1163,7 @@ $script:tepsi.ContextMenuStrip = $menu
 
 # "Yeni sürüm var" bildirimine tıklayınca indirme sayfasını aç
 $script:tepsi.add_BalloonTipClicked({
-    if ($script:guncellemeAdresi -and $script:tepsi.BalloonTipTitle -eq 'Yeni sürüm var') {
+    if ($script:guncellemeAdresi -and $script:sonBildirimBasligi -eq 'Yeni sürüm var') {
         Start-Process explorer.exe $script:guncellemeAdresi
     }
 })
@@ -1153,10 +1184,11 @@ $script:tepsi.Visible = $true
 # İlk açılış
 # ---------------------------------------------------------------------------
 
-# Açık kalmış GoodbyeDPI ve Discord varsa kapat
-Get-Process goodbyedpi, Discord | Stop-Process -Force
+# Bizim önceki çalışmadan açık kalmış GoodbyeDPI'ımızı ve Discord'u kapat
+# (başka paketlerin GoodbyeDPI'ına burada dokunulmaz; onlar için ayrıca sorulur)
+Get-Process Discord | Stop-Process -Force
+GoodbyeDpiKapat
 Start-Sleep -Seconds 1
-sc.exe stop WinDivert | Out-Null
 
 # İnternet henüz yoksa (bilgisayar yeni açıldıysa) gelene kadar bekle
 Durum 'internet kontrol ediliyor'
@@ -1166,7 +1198,10 @@ InterneteKadarBekle
 Durum 'DNS kontrol ediliyor'
 if (-not (DnsDogruMu)) {
     if ($script:gizliBaslat) {
-        Bildirim 'DNS ayarı uygun değil' "Discord bağlanamayabilir. Tepsi menüsünden DNS > 'DNS ayarını kontrol et / yap' seçeneğini kullan." 'Warning'
+        # Daha önce izin verildiyse (yedek varsa) sessizce düzeltmeyi dene, yoksa sadece haber ver
+        if (-not (DnsZehirlenmesiniDuzelt)) {
+            Bildirim 'DNS ayarı uygun değil' "Discord bağlanamayabilir. Tepsi menüsünden DNS > 'DNS ayarını kontrol et / yap' seçeneğini kullan." 'Warning'
+        }
     }
     elseif (-not (Test-Path $script:dnsSormaDosyasi)) {
         if (-not (DnsAyarlaSorarak)) {
@@ -1208,6 +1243,7 @@ if (-not (DiscordBul)) {
 Kaydet "Başlatıcı açıldı (sürüm: $SURUM, gizli: $script:gizliBaslat, ByeDPI ayarı: $script:byedpiAyar)"
 if ($script:gizliBaslat) { DiscordBaslat -Kucuk } else { DiscordBaslat }
 HatalariKaydet 'açılış'
+$script:acilisBitti = $true
 
 # ---------------------------------------------------------------------------
 # Her saniye çalışan kontrol
@@ -1287,15 +1323,10 @@ function ZamanlayiciTuru {
     }
 
     if ($script:asama -eq 'bekle') {
-        $kayitta = Select-String -Path $script:log -Pattern 'splash-update-complete|mainscreen-launch-window' -Quiet
-        if ($script:kucukAcildi) {
-            # Pencere gizliyken: Discord ByeDPI üzerinden bağlandıysa güncelleme bitmiştir
-            $hazir = $kayitta -or (DiscordProxyBaglantisiVarMi)
-        }
-        else {
-            $pencere = Get-Process Discord | Where-Object { $_.MainWindowTitle -match 'Discord' -and $_.MainWindowTitle -notmatch 'Updater' }
-            $hazir = $kayitta -or $pencere
-        }
+        # Güncelleme bitti mi? Ana pencere açıldıysa ya da Discord ByeDPI üzerinden bağlantı kurduysa
+        # (güncelleyici proxy kullanmıyor; ByeDPI'a bağlanan şey ancak asıl Discord olabilir)
+        $pencere = Get-Process Discord | Where-Object { $_.MainWindowTitle -match 'Discord' -and $_.MainWindowTitle -notmatch 'Updater' }
+        $hazir = $pencere -or (DiscordProxyBaglantisiVarMi)
 
         if ($hazir) {
             $script:asama = 'tampon'
