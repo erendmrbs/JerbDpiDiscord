@@ -8,6 +8,11 @@ KOK="$(cd "$(dirname "$0")/.." && pwd)"
 CIKTI="$KOK/cikti"
 PAKET="$CIKTI/JerbDpiDiscord"
 
+# Betiğin başında çift BOM olmasın (PowerShell ilk satırı bozuk okur)
+if head -c 6 "$KOK/byedpi/discord.ps1" | od -An -tx1 | tr -d ' \n' | grep -q '^efbbbfefbbbf'; then
+  echo "HATA: byedpi/discord.ps1 başında çift BOM var" >&2; exit 1
+fi
+
 rm -rf "$CIKTI"; mkdir -p "$PAKET"
 cd "$KOK/kaynak"
 

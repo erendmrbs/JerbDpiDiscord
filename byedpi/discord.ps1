@@ -1,4 +1,4 @@
-﻿﻿# Jerb-DpiDiscord - Discord Başlatıcı
+﻿# Jerb-DpiDiscord - Discord Başlatıcı
 # Copyright (C) 2026 Jerb
 #
 # Bu program özgür bir yazılımdır: Free Software Foundation tarafından yayımlanan
