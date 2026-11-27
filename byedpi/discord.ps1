@@ -15,8 +15,8 @@
 
 param([switch]$Gizli)
 
-# Bu sürümün numarası (güncelleme kontrolü bununla karşılaştırır)
-$SURUM = '1.0.0'
+# Bu sürümün numarası (güncelleme kontrolü bununla karşılaştırır). "1", "1.1", "2.0.1" gibi yazılabilir.
+$SURUM = '1'
 
 # Projenin GitHub sayfası (tepsi menüsünün en üstündeki bağlantı)
 $GITHUB_ADRESI = 'https://github.com/erendmrbs/JerbDpiDiscord'
@@ -547,15 +547,30 @@ function DnsAyarlaSorarak {
 $script:guncellemeAdresi = $null
 $script:bildirilenSurum  = $null
 
-# GitHub'daki son sürümü sor. Dönüş: @{ Surum; Adres } ya da $null (ulaşılamazsa / release yoksa)
+# "v1", "1.1", "v2.0.1" gibi sürüm yazılarını karşılaştırılabilir hale getir ("1" = "1.0" = "1.0.0")
+function SurumCevir($metin) {
+    $metin = "$metin".Trim() -replace '^[vV]', ''
+    $parcalar = @($metin -split '\.' | Where-Object { $_ -ne '' })
+    if ($parcalar.Count -eq 0 -or $parcalar.Count -gt 4) { return $null }
+    $sayilar = @()
+    foreach ($p in $parcalar) {
+        $n = 0
+        if (-not [int]::TryParse($p, [ref]$n)) { return $null }
+        $sayilar += $n
+    }
+    while ($sayilar.Count -lt 4) { $sayilar += 0 }
+    return New-Object System.Version($sayilar[0], $sayilar[1], $sayilar[2], $sayilar[3])
+}
+
+# GitHub'daki son sürümü sor. Dönüş: @{ Surum; Metin; Adres } ya da $null (ulaşılamazsa / release yoksa)
 function SonSurumuGetir {
     $json = & curl.exe -s --max-time 10 -H 'User-Agent: JerbDpiDiscord' -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/erendmrbs/JerbDpiDiscord/releases/latest"
     if (-not $json) { return $null }
     $veri = ($json -join "`n") | ConvertFrom-Json
     if (-not $veri.tag_name) { return $null }
     $metin = ($veri.tag_name -replace '^[vV]', '').Trim()
-    $surum = $null
-    if (-not [version]::TryParse($metin, [ref]$surum)) { return $null }
+    $surum = SurumCevir $metin
+    if (-not $surum) { return $null }
     return @{ Surum = $surum; Metin = $metin; Adres = $veri.html_url }
 }
 
@@ -567,7 +582,7 @@ function GuncellemeKontrol([switch]$Elle) {
         if ($Elle) { Bildirim 'Kontrol edilemedi' "GitHub'a ulaşılamadı ya da henüz yayınlanmış bir sürüm yok." 'Warning' }
         return
     }
-    if ($son.Surum -gt [version]$SURUM) {
+    if ($son.Surum -gt (SurumCevir $SURUM)) {
         $script:guncellemeAdresi = $son.Adres
         $script:guncellemeOgesi.Text = "⬆ Yeni sürüm var: v$($son.Metin) (indir)"
         $script:guncellemeOgesi.Visible = $true
@@ -815,7 +830,7 @@ $ayarBulOgesi.add_Click({
 })
 $menu.Items.Add($ayarBulOgesi) | Out-Null
 
-$denetleOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Güncellemeleri denetle (sürüm $SURUM)")
+$denetleOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Güncellemeleri denetle (sürüm v$SURUM)")
 $denetleOgesi.add_Click({ GuncellemeKontrol -Elle })
 $menu.Items.Add($denetleOgesi) | Out-Null
 
