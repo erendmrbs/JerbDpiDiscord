@@ -60,6 +60,26 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -Namespace Win32 -Name Native -MemberDefinition '[DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr h);'
 
+# Mesaj pencereleri her zaman en önde açılsın (yoksa başka pencerelerin arkasında kalıp görünmüyor)
+Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @'
+using System.Windows.Forms;
+public static class MesajKutusu {
+    public static DialogResult Goster(string metin, string baslik, MessageBoxButtons butonlar, MessageBoxIcon simge) {
+        using (Form sahip = new Form()) {
+            sahip.TopMost = true;
+            sahip.ShowInTaskbar = false;
+            sahip.FormBorderStyle = FormBorderStyle.None;
+            sahip.StartPosition = FormStartPosition.CenterScreen;
+            sahip.Size = new System.Drawing.Size(1, 1);
+            sahip.Opacity = 0;
+            sahip.Show();
+            sahip.Activate();
+            return MessageBox.Show(sahip, metin, baslik, butonlar, simge);
+        }
+    }
+}
+'@
+
 $script:tepsi       = $null
 $script:betikYolu   = $PSCommandPath
 $script:gorevAdi    = 'Discord Baslatici'
@@ -108,7 +128,7 @@ function Hata($mesaj, [switch]$Temizle) {
         Get-Process ciadpi | Stop-Process -Force
     }
     TepsiKaldir
-    [System.Windows.Forms.MessageBox]::Show($mesaj, 'Discord Başlatıcı', 'OK', 'Error') | Out-Null
+    [MesajKutusu]::Goster($mesaj, 'Discord Başlatıcı', 'OK', 'Error') | Out-Null
     exit
 }
 
@@ -251,7 +271,7 @@ function SurucuOnar {
         sc.exe stop $servis | Out-Null
         sc.exe delete $servis | Out-Null
     }
-    $cevap = [System.Windows.Forms.MessageBox]::Show(
+    $cevap = [MesajKutusu]::Goster(
         "Sürücü kaydı temizlendi.`nOnarımın tamamlanması için bilgisayarın yeniden başlatılması gerekiyor.`n`nŞimdi yeniden başlatılsın mı?",
         'Discord Başlatıcı', 'YesNo', 'Question')
     if ($cevap -eq 'Yes') { shutdown.exe /r /t 5 }
@@ -480,7 +500,7 @@ function DnsGeriAl {
 }
 
 function DnsElleAnlat {
-    [System.Windows.Forms.MessageBox]::Show(
+    [MesajKutusu]::Goster(
         "DNS otomatik ayarlanamadı. Elle yapmak için:`n`n" +
         "1. Ayarlar > Ağ ve İnternet > kullandığın bağlantı`n" +
         "2. DNS sunucusu ataması > Düzenle > El ile`n" +
@@ -494,7 +514,7 @@ function DnsElleAnlat {
 
 # Menüden ya da açılışta: izin sorup DNS'i ayarla
 function DnsAyarlaSorarak {
-    $cevap = [System.Windows.Forms.MessageBox]::Show(
+    $cevap = [MesajKutusu]::Goster(
         "İnternet sağlayıcının DNS'i Discord için yanlış adres veriyor. Bu yüzden Discord bağlanamayabilir.`n`n" +
         "DNS ayarın Cloudflare şifreli DNS'e (1.1.1.1, DNS over HTTPS) çevrilsin mi?`n`n" +
         "Eski ayarın yedekleniyor. İstediğin zaman tepsi menüsünden DNS > Eski haline döndür ile geri alabilirsin.",
@@ -630,6 +650,45 @@ $script:sonGecikme = $null
 # Otomatik başlatma açıksa görevi ve kayıtlı yolu güncelle
 if (OtomatikBaslatVarMi) { OtomatikBaslatAyarla $true }
 
+# Programdan çık: mesaj döngüsü çalışıyorsa onu bitir, açılış sırasındaysa işlemi doğrudan sonlandır
+function Cik {
+    if ($script:donguCalisiyor) {
+        $script:ctx.ExitThread()
+    }
+    else {
+        if (-not $script:mutexBirakildi) { $mutex.ReleaseMutex() }
+        [Environment]::Exit(0)
+    }
+}
+
+$script:ctx = New-Object System.Windows.Forms.ApplicationContext
+
+# Başlatıcının tamamını yeniden başlat (Discord, ByeDPI ve GoodbyeDPI dahil)
+function ProgramiYenidenBaslat {
+    Kaydet 'Program yeniden başlatılıyor (kullanıcı isteği)'
+    if ($zamanlayici) { $zamanlayici.Stop() }
+    Get-Process Discord | Stop-Process -Force
+    GoodbyeDpiKapat
+    Get-Process ciadpi | Stop-Process -Force
+    TepsiKaldir
+    if ($script:sonHicon -ne [IntPtr]::Zero) { [Win32.Native]::DestroyIcon($script:sonHicon) | Out-Null }
+    # Yeni kopyanın açılabilmesi için kilidi bırak
+    $mutex.ReleaseMutex()
+    $mutex.Dispose()
+    $script:mutexBirakildi = $true
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script:betikYolu`"" -WindowStyle Hidden
+    Cik
+}
+
+function Bitir {
+    if ($zamanlayici) { $zamanlayici.Stop() }
+    GoodbyeDpiKapat
+    Get-Process ciadpi | Stop-Process -Force
+    TepsiKaldir
+    if ($script:sonHicon -ne [IntPtr]::Zero) { [Win32.Native]::DestroyIcon($script:sonHicon) | Out-Null }
+    Cik
+}
+
 # ---------------------------------------------------------------------------
 # Tepsi simgesi ve menü
 # ---------------------------------------------------------------------------
@@ -719,7 +778,7 @@ $dnsOgesi.DropDownItems.Add($dnsKontrolOgesi) | Out-Null
 
 $dnsGeriOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Eski haline döndür')
 $dnsGeriOgesi.add_Click({
-    $cevap = [System.Windows.Forms.MessageBox]::Show(
+    $cevap = [MesajKutusu]::Goster(
         "DNS ayarın, başlatıcının değiştirmeden önceki haline döndürülsün mü?`n`nDiscord bundan sonra bağlanamayabilir.",
         'Discord Başlatıcı', 'YesNo', 'Question')
     if ($cevap -eq 'Yes') {
@@ -818,7 +877,7 @@ ByeDpiAc
 Durum 'GoodbyeDPI açılıyor'
 if (-not (GoodbyeDpiAc)) {
     Renk 'kirmizi'
-    $cevap = [System.Windows.Forms.MessageBox]::Show(
+    $cevap = [MesajKutusu]::Goster(
         "GoodbyeDPI başlatılamadı (sürücü sorunu olabilir).`n`nSürücüyü onarmak ister misin?",
         'Discord Başlatıcı', 'YesNo', 'Error')
     GoodbyeDpiKapat
@@ -841,34 +900,6 @@ if (-not (DiscordBul)) {
 Kaydet "Başlatıcı açıldı (gizli: $script:gizliBaslat, ByeDPI ayarı: $script:byedpiAyar)"
 if ($script:gizliBaslat) { DiscordBaslat -Kucuk } else { DiscordBaslat }
 HatalariKaydet 'açılış'
-
-$script:ctx = New-Object System.Windows.Forms.ApplicationContext
-
-# Başlatıcının tamamını yeniden başlat (Discord, ByeDPI ve GoodbyeDPI dahil)
-function ProgramiYenidenBaslat {
-    Kaydet 'Program yeniden başlatılıyor (kullanıcı isteği)'
-    $zamanlayici.Stop()
-    Get-Process Discord | Stop-Process -Force
-    GoodbyeDpiKapat
-    Get-Process ciadpi | Stop-Process -Force
-    TepsiKaldir
-    if ($script:sonHicon -ne [IntPtr]::Zero) { [Win32.Native]::DestroyIcon($script:sonHicon) | Out-Null }
-    # Yeni kopyanın açılabilmesi için kilidi bırak
-    $mutex.ReleaseMutex()
-    $mutex.Dispose()
-    $script:mutexBirakildi = $true
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script:betikYolu`"" -WindowStyle Hidden
-    $script:ctx.ExitThread()
-}
-
-function Bitir {
-    $zamanlayici.Stop()
-    GoodbyeDpiKapat
-    Get-Process ciadpi | Stop-Process -Force
-    TepsiKaldir
-    if ($script:sonHicon -ne [IntPtr]::Zero) { [Win32.Native]::DestroyIcon($script:sonHicon) | Out-Null }
-    $script:ctx.ExitThread()
-}
 
 # ---------------------------------------------------------------------------
 # Her saniye çalışan kontrol
@@ -1009,6 +1040,7 @@ $zamanlayici.add_Tick({
 })
 
 $zamanlayici.Start()
+$script:donguCalisiyor = $true
 [System.Windows.Forms.Application]::Run($script:ctx)
 HatalariKaydet 'kapanış'
 if (-not $script:mutexBirakildi) { $mutex.ReleaseMutex() }

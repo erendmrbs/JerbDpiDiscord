@@ -132,7 +132,7 @@ Pick one from the [**Releases**](https://github.com/erendmrbs/JerbDpiDiscord/rel
 |---|---|
 | **`JerbDpiDiscord-vX-Kurulum.exe`** (recommended) | Regular installer. Installs to Program Files, adds Start menu and desktop shortcuts, can be removed from **Settings → Apps**. |
 | **`JerbDpiDiscord-vX-Tasinabilir.zip`** | Portable, no installation. Extract anywhere and run `JerbDpiDiscord.exe`. Works from a USB stick too. |
-| **`JerbDpiDiscord.exe`** | The launcher alone. It doesn't work on its own; it must sit next to the `byedpi` and `goodbyedpi` folders. For people running from source who prefer it over `Baslat.bat`. |
+| **`JerbDpiDiscord-vX-TekDosya.exe`** | Single file, no installation. Double-click it and it extracts everything to `%LocalAppData%\JerbDpiDiscord` and opens the launcher. Running a newer version updates the files there without touching your settings. |
 
 ByeDPI and GoodbyeDPI are included in all of them, you don't need to download anything else.
 
@@ -468,6 +468,7 @@ Instead of trusting the exe, zip and installer from Releases, you can build them
 | `kaynak/launcher.c` | Source code of `JerbDpiDiscord.exe` |
 | `kaynak/launcher.rc`, `app.manifest`, `simge.ico` | Icon, version info and admin rights setting |
 | `kaynak/setup.nsi` | The installer (NSIS) |
+| `kaynak/tekdosya.nsi` | Single-file exe (NSIS) |
 | `kaynak/derle.sh` | Script that builds everything with one command |
 
 On Linux (or WSL on Windows):
@@ -482,6 +483,8 @@ Output goes to the `cikti/` folder.
 ## Uninstalling
 
 **If you used the installer:** First, if the launcher changed your DNS, choose **DNS → Eski haline döndür** (Restore previous) in the menu. Then **Settings → Apps → Jerb-DpiDiscord → Uninstall.** The uninstaller removes the launcher, the autostart task and its settings files.
+
+**If you used the single-file exe:** Follow the steps below; in step 4 delete the `%LocalAppData%\JerbDpiDiscord` folder.
 
 **If you use the portable version or run from source:**
 
