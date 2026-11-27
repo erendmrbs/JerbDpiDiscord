@@ -105,6 +105,7 @@ Güncelleme kontrolünün bittiği şu yollardan biriyle anlaşılıyor:
 - 🔕 **Sessiz mod.** Sadece sorun bildirimlerini gösteriyor.
 - 📶 **Bağlantı bilgisi.** Discord'a bağlanma süresini ve kullanılan ByeDPI ayarını gösteriyor.
 - 🌐 **DNS ayarını kendisi yapıyor.** Sağlayıcının DNS engelini fark edip izin isteyerek şifreli DNS'e geçiyor, istersen geri alıyor.
+- 🔔 **Güncelleme bildirimi.** GitHub'da yeni sürüm çıkınca bildirim gösteriyor, menünün en üstüne indirme bağlantısı koyuyor.
 - 🧹 **Discord kapanınca her şeyi kapatıyor.** Arka planda hiçbir şey açık kalmıyor.
 
 ---
@@ -237,6 +238,7 @@ Başlatıcı simgesine **sol tıklayınca** tepsideki Discord penceresi öne gel
 
 | Seçenek | Ne yapar |
 |---|---|
+| **⬆ Yeni sürüm var** | Sadece yeni sürüm çıkınca görünür, indirme sayfasını açar |
 | **Jerb-DpiDiscord GitHub** | Bu projenin GitHub sayfasını tarayıcıda açar |
 | **Destek ol (bağış)** | Projeyi desteklemek için GitHub Sponsors sayfasını açar |
 | **Durum** | Şu anda ne olduğunu gösterir (güncelleme bekleniyor, çalışıyor, vb.) |
@@ -245,6 +247,7 @@ Başlatıcı simgesine **sol tıklayınca** tepsideki Discord penceresi öne gel
 | **Discord'u yeniden başlat** | Discord'u kapatır, güncelleme kontrolünden geçirip yeniden açar |
 | **Programı yeniden başlat** | Başlatıcının tamamını (Discord, ByeDPI, GoodbyeDPI dahil) kapatıp baştan açar |
 | **ByeDPI ayarını otomatik bul** | Bağlantıyı test eder, çalışmıyorsa diğer ayarları deneyip çalışanı kaydeder |
+| **Güncellemeleri denetle** | GitHub'da yeni sürüm olup olmadığına hemen bakar. Başlatıcı bunu açıldıktan 30 saniye sonra ve sonra 6 saatte bir kendisi de yapıyor. |
 | **Kayıtları aç** | Olay kayıtlarını (`baslatici.log`) Not Defteri'nde açar |
 | **Sürücü hatasını onar** | WinDivert sürücü kaydını temizler, yeniden başlatma önerir |
 | **DNS → DNS ayarını kontrol et / yap** | DNS'in Discord'u doğru adrese çözüp çözmediğine bakar, gerekirse şifreli DNS'e geçirir |
@@ -370,6 +373,9 @@ Başlatıcı zaten açık. Tepsideki simgeye bak. Gizli simgelerin içinde olabi
 ---
 
 ## Sık sorulan sorular
+
+**Yeni sürüm çıkınca nasıl güncellerim?**
+Başlatıcı yeni sürümü haber veriyor. Bildirime ya da menüdeki **"⬆ Yeni sürüm var"** satırına tıkla, release sayfasından zip'i indir. Başlatıcıyı kapat ("Her şeyi kapat"), yeni zip'teki dosyaları eski klasörün üzerine kopyala. Ayarların (`byedpi_ayar.txt`, `sessiz_mod.txt`) korunur.
 
 **Neden yönetici izni gerekiyor?**
 GoodbyeDPI'ın kullandığı WinDivert sürücüsünü yükleyebilmek için. ByeDPI ve Discord'un kendisi yönetici izni gerektirmiyor.

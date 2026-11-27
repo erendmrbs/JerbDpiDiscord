@@ -107,6 +107,7 @@ The end of the update check is detected by any of these:
 - 🔕 **Quiet mode.** Shows only problem notifications.
 - 📶 **Connection info.** Shows the connection time to Discord and the ByeDPI setting in use.
 - 🌐 **Sets up DNS for you.** Detects your ISP's DNS block and, with your permission, switches to encrypted DNS. You can undo it any time.
+- 🔔 **Update notifications.** When a new version is released on GitHub, it shows a notification and puts a download link at the top of the menu.
 - 🧹 **Closes everything when Discord closes.** Nothing is left running in the background.
 
 ---
@@ -239,6 +240,7 @@ I also recommend turning on **"Minimize to tray"** in the same place.
 
 | Item (Turkish) | Meaning | What it does |
 |---|---|---|
+| **⬆ Yeni sürüm var** | New version available | Only appears when a new version is out; opens the download page |
 | **Jerb-DpiDiscord GitHub** | | Opens this project's GitHub page |
 | **Destek ol (bağış)** | Support (donate) | Opens the GitHub Sponsors page |
 | **Durum** | Status | Shows what's happening (waiting for update, running, etc.) |
@@ -247,6 +249,7 @@ I also recommend turning on **"Minimize to tray"** in the same place.
 | **Discord'u yeniden başlat** | Restart Discord | Closes Discord, passes it through the update check and starts it again |
 | **Programı yeniden başlat** | Restart program | Closes the whole launcher (Discord, ByeDPI, GoodbyeDPI included) and starts it fresh |
 | **ByeDPI ayarını otomatik bul** | Find ByeDPI setting | Tests the connection; if it fails, tries other settings and saves the one that works |
+| **Güncellemeleri denetle** | Check for updates | Checks GitHub for a new version right away. The launcher also does this 30 seconds after starting and every 6 hours. |
 | **Kayıtları aç** | Open log | Opens the event log (`baslatici.log`) in Notepad |
 | **Sürücü hatasını onar** | Repair driver | Clears the WinDivert driver registration and offers a restart |
 | **DNS → DNS ayarını kontrol et / yap** | Check / set up DNS | Checks whether DNS resolves Discord correctly; switches to encrypted DNS if needed |
@@ -372,6 +375,9 @@ The launcher is already open. Look for its tray icon. It may be among the hidden
 ---
 
 ## FAQ
+
+**How do I update when a new version comes out?**
+The launcher tells you. Click the notification or **"⬆ Yeni sürüm var"** (New version available) at the top of the menu and download the zip from the release page. Close the launcher ("Her şeyi kapat"), then copy the files from the new zip over the old folder. Your settings (`byedpi_ayar.txt`, `sessiz_mod.txt`) are kept.
 
 **Why does it need administrator rights?**
 To load the WinDivert driver used by GoodbyeDPI. ByeDPI and Discord itself don't need administrator rights.

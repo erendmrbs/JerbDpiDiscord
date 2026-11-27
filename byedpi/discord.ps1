@@ -15,6 +15,9 @@
 
 param([switch]$Gizli)
 
+# Bu sürümün numarası (güncelleme kontrolü bununla karşılaştırır)
+$SURUM = '1.0.0'
+
 # Projenin GitHub sayfası (tepsi menüsünün en üstündeki bağlantı)
 $GITHUB_ADRESI = 'https://github.com/erendmrbs/JerbDpiDiscord'
 $BAGIS_ADRESI  = 'https://github.com/sponsors/erendmrbs'
@@ -539,6 +542,47 @@ function DnsAyarlaSorarak {
     return $false
 }
 
+# --- Güncelleme kontrolü ---
+
+$script:guncellemeAdresi = $null
+$script:bildirilenSurum  = $null
+
+# GitHub'daki son sürümü sor. Dönüş: @{ Surum; Adres } ya da $null (ulaşılamazsa / release yoksa)
+function SonSurumuGetir {
+    $json = & curl.exe -s --max-time 10 -H 'User-Agent: JerbDpiDiscord' -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/erendmrbs/JerbDpiDiscord/releases/latest"
+    if (-not $json) { return $null }
+    $veri = ($json -join "`n") | ConvertFrom-Json
+    if (-not $veri.tag_name) { return $null }
+    $metin = ($veri.tag_name -replace '^[vV]', '').Trim()
+    $surum = $null
+    if (-not [version]::TryParse($metin, [ref]$surum)) { return $null }
+    return @{ Surum = $surum; Metin = $metin; Adres = $veri.html_url }
+}
+
+# Yeni sürüm varsa menüde göster ve (bu sürüm için bir kere) bildirim ver.
+# $Elle: menüden istendiyse "güncel" ya da "kontrol edilemedi" sonucunu da bildir.
+function GuncellemeKontrol([switch]$Elle) {
+    $son = SonSurumuGetir
+    if (-not $son) {
+        if ($Elle) { Bildirim 'Kontrol edilemedi' "GitHub'a ulaşılamadı ya da henüz yayınlanmış bir sürüm yok." 'Warning' }
+        return
+    }
+    if ($son.Surum -gt [version]$SURUM) {
+        $script:guncellemeAdresi = $son.Adres
+        $script:guncellemeOgesi.Text = "⬆ Yeni sürüm var: v$($son.Metin) (indir)"
+        $script:guncellemeOgesi.Visible = $true
+        $script:guncellemeAyrac.Visible = $true
+        if ($Elle -or $script:bildirilenSurum -ne $son.Metin) {
+            $script:bildirilenSurum = $son.Metin
+            Kaydet "Yeni sürüm bulundu: v$($son.Metin) (bu sürüm: v$SURUM)"
+            Bildirim 'Yeni sürüm var' "Jerb-DpiDiscord v$($son.Metin) yayınlandı (sende v$SURUM). İndirmek için bu bildirime ya da menüdeki bağlantıya tıkla."
+        }
+    }
+    elseif ($Elle) {
+        Bildirim 'Güncel' "En son sürümü kullanıyorsun (v$SURUM)."
+    }
+}
+
 # --- Otomatik başlatma ---
 
 function OtomatikBaslatVarMi {
@@ -707,6 +751,17 @@ Renk 'sari'
 
 $menu = New-Object System.Windows.Forms.ContextMenuStrip
 
+# Yeni sürüm varsa en üstte görünen satır (başta gizli)
+$script:guncellemeOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Yeni sürüm var')
+$script:guncellemeOgesi.Font = New-Object System.Drawing.Font($script:guncellemeOgesi.Font, [System.Drawing.FontStyle]::Bold)
+$script:guncellemeOgesi.ForeColor = [System.Drawing.Color]::FromArgb(35, 140, 75)
+$script:guncellemeOgesi.Visible = $false
+$script:guncellemeOgesi.add_Click({ if ($script:guncellemeAdresi) { Start-Process explorer.exe $script:guncellemeAdresi } })
+$menu.Items.Add($script:guncellemeOgesi) | Out-Null
+$script:guncellemeAyrac = New-Object System.Windows.Forms.ToolStripSeparator
+$script:guncellemeAyrac.Visible = $false
+$menu.Items.Add($script:guncellemeAyrac) | Out-Null
+
 # En üstte: GitHub sayfasını aç
 $githubOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Jerb-DpiDiscord GitHub')
 $githubOgesi.Font = New-Object System.Drawing.Font($githubOgesi.Font, [System.Drawing.FontStyle]::Bold)
@@ -759,6 +814,10 @@ $ayarBulOgesi.add_Click({
     }
 })
 $menu.Items.Add($ayarBulOgesi) | Out-Null
+
+$denetleOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Güncellemeleri denetle (sürüm $SURUM)")
+$denetleOgesi.add_Click({ GuncellemeKontrol -Elle })
+$menu.Items.Add($denetleOgesi) | Out-Null
 
 $kayitOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Kayıtları aç')
 $kayitOgesi.add_Click({
@@ -845,6 +904,13 @@ $menu.Items.Add($kapatOgesi) | Out-Null
 
 $script:tepsi.ContextMenuStrip = $menu
 
+# "Yeni sürüm var" bildirimine tıklayınca indirme sayfasını aç
+$script:tepsi.add_BalloonTipClicked({
+    if ($script:guncellemeAdresi -and $script:tepsi.BalloonTipTitle -eq 'Yeni sürüm var') {
+        Start-Process explorer.exe $script:guncellemeAdresi
+    }
+})
+
 # Simgeye sol tıklayınca Discord penceresini öne getir
 # (Discord zaten açıkken tekrar çalıştırılınca açık olan pencereyi gösterir)
 $script:tepsi.add_MouseClick({
@@ -905,7 +971,7 @@ if (-not (DiscordBul)) {
     Bildirim 'Discord kuruldu' 'Discord açılıyor...'
 }
 
-Kaydet "Başlatıcı açıldı (gizli: $script:gizliBaslat, ByeDPI ayarı: $script:byedpiAyar)"
+Kaydet "Başlatıcı açıldı (sürüm: $SURUM, gizli: $script:gizliBaslat, ByeDPI ayarı: $script:byedpiAyar)"
 if ($script:gizliBaslat) { DiscordBaslat -Kucuk } else { DiscordBaslat }
 HatalariKaydet 'açılış'
 
@@ -987,6 +1053,11 @@ $zamanlayici.add_Tick({
         if ($script:sayac % 3 -eq 0) {
             if (Get-Process Discord) { $script:yok = 0 } else { $script:yok++ }
             if ($script:yok -ge 2) { Bitir; return }
+        }
+
+        # Hazır olduktan 30 saniye sonra ve sonra her 6 saatte bir güncelleme kontrolü
+        if ($script:sayac -eq 30 -or ($script:sayac -gt 30 -and $script:sayac % 21600 -eq 0)) {
+            GuncellemeKontrol
         }
 
         # Hazır olduktan 10 saniye sonra ve sonra her dakika bağlantıyı test et
