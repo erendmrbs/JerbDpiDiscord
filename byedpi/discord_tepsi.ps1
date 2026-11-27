@@ -1,6 +1,12 @@
 ﻿﻿# Jerb-DpiDiscord - Discord Başlatıcı
-# Copyright (c) 2026 Jerb
-# MIT Lisansı ile açık kaynak. Ayrıntılar için LICENSE dosyasına bak.
+# Copyright (C) 2026 Jerb
+#
+# Bu program özgür bir yazılımdır: Free Software Foundation tarafından yayımlanan
+# GNU Genel Kamu Lisansı'nın 3. sürümü ya da (tercihinize göre) daha sonraki bir
+# sürümü altında yeniden dağıtabilir ve/veya değiştirebilirsiniz.
+# Bu program faydalı olması umuduyla, ancak HİÇBİR GARANTİ OLMADAN dağıtılmaktadır.
+# Ayrıntılar için LICENSE dosyasına bakın.
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Discord Başlatıcı - sistem tepsisinde çalışır
 # GoodbyeDPI'ı Discord güncelleme kontrolü için kısa süre açar,
