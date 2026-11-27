@@ -277,7 +277,7 @@ I also recommend turning on **"Minimize to tray"** in the same place.
 Tick **"Bilgisayar açılınca başlat"** (Start with Windows) in the right-click menu.
 
 - A task named **"Discord Baslatici"** is added to Windows **Task Scheduler**. It runs with administrator rights, so there's no permission prompt at every startup.
-- It starts **30 seconds after you sign in**, to give the internet connection time to come up.
+- It starts **5 seconds after you sign in**. If the internet connection isn't up yet, the launcher notices and waits until it is (yellow icon, status: "internet bekleniyor"), then starts Discord.
 - Discord's window doesn't open; it starts **minimized to the tray**. The "Discord ready" notification isn't shown either.
 
 ### If you move or rename the folder

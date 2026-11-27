@@ -275,7 +275,7 @@ Başlatıcı simgesine **sol tıklayınca** tepsideki Discord penceresi öne gel
 Sağ tık menüsünden **"Bilgisayar açılınca başlat"** seçeneğini işaretle.
 
 - Windows **Görev Zamanlayıcı**'ya **"Discord Baslatici"** adında bir görev ekleniyor. Görev yönetici yetkisiyle çalıştığı için her açılışta izin penceresi çıkmıyor.
-- Oturum açtıktan **30 saniye sonra** başlıyor, internet bağlantısının hazır olmasına zaman kalsın diye.
+- Oturum açtıktan **5 saniye sonra** başlıyor. İnternet bağlantısı henüz hazır değilse başlatıcı bunu fark edip bağlantı gelene kadar bekliyor (simge sarı, durum: "internet bekleniyor"), sonra Discord'u açıyor.
 - Discord penceresi açılmıyor, doğrudan **tepsiye küçülmüş** başlıyor. "Discord hazır" bildirimi de gösterilmiyor.
 
 ### Klasörü taşırsan ya da adını değiştirirsen

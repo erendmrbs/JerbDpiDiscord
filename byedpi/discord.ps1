@@ -387,6 +387,42 @@ function DiscordProxyBaglantisiVarMi {
     return [bool](Get-NetTCPConnection -RemotePort 1080 -State Established | Where-Object { $pidler -contains $_.OwningProcess })
 }
 
+# --- İnternet bağlantısı ---
+
+# İnternete çıkılabiliyor mu? (Cloudflare 1.1.1.1:443'e kısa bir TCP bağlantısı dener)
+function InternetVarMi {
+    $istemci = New-Object System.Net.Sockets.TcpClient
+    try {
+        $deneme = $istemci.ConnectAsync('1.1.1.1', 443)
+        return ($deneme.Wait(2000) -and $istemci.Connected)
+    }
+    catch { return $false }
+    finally { $istemci.Dispose() }
+}
+
+# İnternet gelene kadar bekle. Beklerken menü çalışmaya devam eder (ör. "Her şeyi kapat").
+function InterneteKadarBekle {
+    if (InternetVarMi) { return }
+    Kaydet 'İnternet bağlantısı yok, bekleniyor'
+    Renk 'sari'
+    $baslangic = Get-Date
+    $uyarildi = $false
+    while (-not (InternetVarMi)) {
+        $gecen = [int]((Get-Date) - $baslangic).TotalSeconds
+        Durum "internet bekleniyor ($gecen sn)"
+        if (-not $uyarildi -and $gecen -ge 60) {
+            Bildirim 'İnternet bekleniyor' 'İnternet bağlantısı gelince Discord kendiliğinden açılacak.' 'Warning'
+            $uyarildi = $true
+        }
+        # 2 saniye bekle, bu sırada menü tıklamalarına cevap ver
+        for ($i = 0; $i -lt 20; $i++) {
+            [System.Windows.Forms.Application]::DoEvents()
+            Start-Sleep -Milliseconds 100
+        }
+    }
+    Kaydet "İnternet bağlantısı geldi ($([int]((Get-Date) - $baslangic).TotalSeconds) sn beklendi)"
+}
+
 # --- DNS ---
 
 # discord.com şu an hangi adrese çözülüyor?
@@ -660,7 +696,7 @@ function OtomatikBaslatAyarla($ac) {
         $kullanici = [Security.Principal.WindowsIdentity]::GetCurrent().Name
         $eylem = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$bulucuYolu`""
         $tetik = New-ScheduledTaskTrigger -AtLogOn -User $kullanici
-        $tetik.Delay = 'PT30S'
+        $tetik.Delay = 'PT5S'
         $yetki = New-ScheduledTaskPrincipal -UserId $kullanici -LogonType Interactive -RunLevel Highest
         $ayar  = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit ([TimeSpan]::Zero)
         Register-ScheduledTask -TaskName $script:gorevAdi -Action $eylem -Trigger $tetik -Principal $yetki -Settings $ayar -Force | Out-Null
@@ -946,6 +982,10 @@ $script:tepsi.Visible = $true
 Get-Process goodbyedpi, Discord | Stop-Process -Force
 Start-Sleep -Seconds 1
 sc.exe stop WinDivert | Out-Null
+
+# İnternet henüz yoksa (bilgisayar yeni açıldıysa) gelene kadar bekle
+Durum 'internet kontrol ediliyor'
+InterneteKadarBekle
 
 # DNS kontrolü (GoodbyeDPI kendi DNS yönlendirmesini yaptığı için o açılmadan önce bakılır)
 Durum 'DNS kontrol ediliyor'
