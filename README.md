@@ -124,19 +124,13 @@ Güncelleme kontrolünün bittiği şu yollardan biriyle anlaşılıyor:
 
 ### 1. İndir
 
-[**Releases**](https://github.com/erendmrbs/JerbDpiDiscord/releases/latest) sayfasından birini seç:
+[**Releases**](https://github.com/erendmrbs/JerbDpiDiscord/releases/latest) sayfasından **`JerbDpiDiscord-vX.zip`** dosyasını indir. (Ya da yeşil **Code** butonu → **Download ZIP**.) ByeDPI ve GoodbyeDPI içinde geliyor, ayrıca bir şey indirmene gerek yok.
 
-| Dosya | Ne zaman |
-|---|---|
-| **`JerbDpiDiscord-vX-Kurulum.exe`** (önerilen) | Normal kurulum. Program Files'a kurar, Başlat menüsüne ve masaüstüne kısayol ekler, **Ayarlar → Uygulamalar**'dan kaldırılabilir. |
-| **`JerbDpiDiscord-vX-Tasinabilir.zip`** | Kurulum istemiyorsan. İstediğin klasöre çıkar, içindeki `JerbDpiDiscord.exe` dosyasını çalıştır. USB bellekte de taşıyabilirsin. |
-| **`JerbDpiDiscord-vX-TekDosya.exe`** | Tek dosya, kurulum yok. Çift tıklayınca her şeyi `%LocalAppData%\JerbDpiDiscord` klasörüne çıkarıp başlatıcıyı açıyor. Yeni sürümünü çalıştırınca o klasördeki dosyaları güncelliyor, ayarlarına dokunmuyor. |
+**Çıkarmadan önce (önerilir):** Zip dosyasına sağ tıkla → **Özellikler** → altta **"Engellemeyi kaldır"** kutusunu işaretle → **Tamam.** Sonra istediğin klasöre çıkar.
 
-ByeDPI ve GoodbyeDPI hepsinin içinde geliyor, ayrıca bir şey indirmene gerek yok.
-
-**Kaynak koddan kullanmak istersen:** yeşil **Code** butonu → **Download ZIP**, bir klasöre çıkar, `Baslat.bat` ile çalıştır.
-
-> **`JerbDpiDiscord.exe` ile `Baslat.bat` arasındaki fark:** İkisi de aynı betiği (`byedpi\discord.ps1`) başlatıyor. Exe yönetici iznini kendi adıyla ve simgesiyle istiyor, açılışta hiçbir pencere göstermiyor. Bat dosyası kısa bir an siyah bir pencere gösterebilir. Exe'nin kaynak kodu `kaynak/launcher.c` dosyasında.
+> **Neden?** Windows internetten indirilen dosyalara "internetten geldi" işareti koyuyor. Zip'ten çıkan her dosya da bu işareti alıyor ve `Baslat.bat` açılırken **"Yayımcı doğrulanamadı"** uyarısı çıkıyor. "Engellemeyi kaldır" bu işareti baştan siliyor, böylece hiç uyarı görmezsin.
+>
+> Bu adımı atlarsan da sorun yok: İlk açılışta uyarıda **Çalıştır** de. Başlatıcı ilk çalıştığında klasöründeki bütün dosyalardan bu işareti kendisi kaldırıyor, uyarı bir daha çıkmıyor.
 
 ### 2. Klasör düzeni
 
@@ -144,8 +138,7 @@ Zip'ten çıkan klasör şöyle görünmeli:
 
 ```
 JerbDpiDiscord\
-├── JerbDpiDiscord.exe           ← başlatıcı (Releases'teki zip ve kurulumda)
-├── Baslat.bat                   ← aynı işi yapan bat dosyası
+├── Baslat.bat                   ← başlatıcı, buna çift tıkla
 ├── LICENSE
 ├── README.md
 ├── README.en.md
@@ -161,7 +154,7 @@ JerbDpiDiscord\
     └── licenses\               ← GoodbyeDPI ve WinDivert lisansları
 ```
 
-Ana klasörün adı önemli değil. İstediğin yere koyabilir, istediğin adı verebilirsin. Sadece `JerbDpiDiscord.exe` (ya da `Baslat.bat`), `byedpi` ve `goodbyedpi` yan yana kalsın.
+Ana klasörün adı önemli değil. İstediğin yere koyabilir, istediğin adı verebilirsin. Sadece `Baslat.bat`, `byedpi` ve `goodbyedpi` yan yana kalsın.
 
 > **Daha yeni sürüm kullanmak istersen:** [ByeDPI](https://github.com/hufrea/byedpi/releases) ve [GoodbyeDPI](https://github.com/ValdikSS/GoodbyeDPI/releases) dosyalarını resmi sayfalarından indirip aynı yerlere koyabilirsin. GoodbyeDPI dosyalarını `goodbyedpi\x86_64\` klasörünün içine koyarsan da çalışır.
 
@@ -221,7 +214,7 @@ Aynı yerdeki **"Kapat düğmesi Discord'u sistem tepsisine küçültsün"** se�
 
 ## Kullanım
 
-1. **`JerbDpiDiscord.exe`** dosyasına (kurulum yaptıysan masaüstündeki **Jerb-DpiDiscord** kısayoluna) ya da **`Baslat.bat`** dosyasına çift tıkla.
+1. **`Baslat.bat`** dosyasına çift tıkla. (İlk seferde "Yayımcı doğrulanamadı" uyarısı çıkarsa **Çalıştır** de, bkz. [Kurulum](#kurulum).)
 2. Windows yönetici izni isteyecek, **Evet** de.
 3. Sistem tepsisinde (saatin yanında) bir **Discord simgesi** belirecek. Köşesindeki nokta **sarı**.
 4. Discord açılıyor ve güncelleme kontrolü yapıyor. Simgenin üstüne gelince durumu görebilirsin.
@@ -411,7 +404,7 @@ Başlatıcı yönetici yetkisiyle çalışıyor, bir ağ sürücüsünü yüklü
 ### Kodu kendin incele
 
 Başlatıcının tamamı düz metin dosyalarından oluşuyor, derlenmiş gizli bir kısmı yok:
-- `Baslat.bat` ve `JerbDpiDiscord.exe`: sadece `discord.ps1` dosyasını gizli olarak başlatıyor. Exe'nin kaynak kodu `kaynak/launcher.c` dosyasında (60 satır kadar).
+- `Baslat.bat`: sadece `discord.ps1` dosyasını gizli olarak başlatıyor.
 - `byedpi/discord.ps1`: her şeyi yapan betik. Not Defteri ile açıp her satırını okuyabilirsin. Kod Türkçe açıklamalarla yazıldı.
 
 Başlatıcı internete sadece şunlar için bağlanıyor: Discord'un kendi sunucuları (bağlantı testi ve Discord kurulumu indirme) ve DNS ayarında Cloudflare (1.1.1.1). Hiçbir veri toplamıyor, hiçbir yere bir şey göndermiyor.
@@ -449,42 +442,16 @@ Bazı antivirüs programları (Windows Defender dahil) bu projedeki dosyaları *
 
 - **WinDivert** sürücüsü ağ trafiğine çekirdek seviyesinde müdahale ediyor. Aynı sürücü bazı zararlı yazılımlarda da kullanıldığı için antivirüsler sürücünün kendisini işaretleyebiliyor. WinDivert'in kendisi açık kaynak ve meşru bir araç.
 - **DPI aşma araçları** (GoodbyeDPI, ByeDPI) ağ paketlerini değiştirdiği için bazı antivirüslerde "HackTool" ya da "RiskWare" gibi genel bir uyarıyla görünebiliyor. Bu bir virüs olduğu anlamına gelmiyor, "bu araç ağ trafiğini değiştiriyor" demek.
-- **Gizli çalışan PowerShell betiği** ve **yönetici yetkisi isteyen** bir `.bat` ya da `.exe` dosyası da bazı güvenlik programlarına şüpheli görünebiliyor.
-- `JerbDpiDiscord.exe` ve kurulum programı **dijital olarak imzalı değil** (imza sertifikası ücretli). Bu yüzden Windows SmartScreen ilk açılışta "Windows bilgisayarınızı korudu" diyebilir: **Ek bilgi → Yine de çalıştır.** Release sayfasındaki SHA-256 özetleriyle dosyanın değişmediğini kontrol edebilirsin.
+- **Gizli çalışan PowerShell betiği** ve **yönetici yetkisi isteyen** bir `.bat` dosyası da bazı güvenlik programlarına şüpheli görünebiliyor.
 
 **Ne yapmalı:**
 1. Önce yukarıdaki SHA-256 özetleriyle dosyaları doğrula.
 2. İstersen dosyaları [VirusTotal](https://www.virustotal.com/)'e yükleyip onlarca antivirüsün sonucunu birlikte görebilirsin. Birkaç antivirüsün "HackTool" demesi bu tür araçlar için normal.
 3. Güveniyorsan proje klasörünü antivirüsünün **istisnalar** listesine ekle. Windows Defender'da: **Windows Güvenliği → Virüs ve tehdit koruması → Ayarları yönet → Dışlamalar → Dışlama ekle → Klasör.**
 
-### Exe'yi ve kurulumu kendin derle
-
-Release'teki exe, zip ve kurulum programına güvenmek yerine kendin de derleyebilirsin. Hepsinin kaynağı `kaynak/` klasöründe:
-
-| Dosya | Ne |
-|---|---|
-| `kaynak/launcher.c` | `JerbDpiDiscord.exe`'nin kaynak kodu |
-| `kaynak/launcher.rc`, `app.manifest`, `simge.ico` | Simge, sürüm bilgisi ve yönetici izni ayarı |
-| `kaynak/setup.nsi` | Kurulum programı (NSIS) |
-| `kaynak/tekdosya.nsi` | Tek dosya exe (NSIS) |
-| `kaynak/derle.sh` | Hepsini tek komutla derleyen betik |
-
-Linux'ta (ya da Windows'ta WSL ile):
-```sh
-sudo apt install gcc-mingw-w64-x86-64 nsis zip
-sh kaynak/derle.sh 1.0.0
-```
-Çıktılar `cikti/` klasörüne yazılır.
-
 ---
 
 ## Kaldırma
-
-**Kurulum yaptıysan:** Önce DNS ayarını başlatıcı değiştirdiyse menüden **DNS → Eski haline döndür** seç. Sonra **Ayarlar → Uygulamalar → Jerb-DpiDiscord → Kaldır.** Kaldırma programı başlatıcıyı, otomatik başlatma görevini ve ayar dosyalarını siliyor.
-
-**Tek dosya exe kullandıysan:** Aşağıdaki adımları uygula, 4. adımda `%LocalAppData%\JerbDpiDiscord` klasörünü sil.
-
-**Taşınabilir ya da kaynak koddan kullanıyorsan:**
 
 1. Menüden **"Bilgisayar açılınca başlat"** işaretini kaldır (görev silinir).
 2. DNS ayarını başlatıcı değiştirdiyse menüden **DNS → Eski haline döndür** seç.

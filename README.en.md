@@ -126,19 +126,13 @@ The end of the update check is detected by any of these:
 
 ### 1. Download
 
-Pick one from the [**Releases**](https://github.com/erendmrbs/JerbDpiDiscord/releases/latest) page:
+Download **`JerbDpiDiscord-vX.zip`** from the [**Releases**](https://github.com/erendmrbs/JerbDpiDiscord/releases/latest) page. (Or green **Code** button → **Download ZIP**.) ByeDPI and GoodbyeDPI are included, you don't need to download anything else.
 
-| File | When |
-|---|---|
-| **`JerbDpiDiscord-vX-Kurulum.exe`** (recommended) | Regular installer. Installs to Program Files, adds Start menu and desktop shortcuts, can be removed from **Settings → Apps**. |
-| **`JerbDpiDiscord-vX-Tasinabilir.zip`** | Portable, no installation. Extract anywhere and run `JerbDpiDiscord.exe`. Works from a USB stick too. |
-| **`JerbDpiDiscord-vX-TekDosya.exe`** | Single file, no installation. Double-click it and it extracts everything to `%LocalAppData%\JerbDpiDiscord` and opens the launcher. Running a newer version updates the files there without touching your settings. |
+**Before extracting (recommended):** Right-click the zip → **Properties** → tick **"Unblock"** at the bottom → **OK.** Then extract it to any folder.
 
-ByeDPI and GoodbyeDPI are included in all of them, you don't need to download anything else.
-
-**To run from source:** green **Code** button → **Download ZIP**, extract it and run `Baslat.bat`.
-
-> **`JerbDpiDiscord.exe` vs `Baslat.bat`:** Both start the same script (`byedpi\discord.ps1`). The exe asks for administrator rights with its own name and icon and shows no window at all. The bat file may briefly flash a black window. The exe's source code is in `kaynak/launcher.c`.
+> **Why?** Windows marks files downloaded from the internet. Every file extracted from the zip gets that mark too, and `Baslat.bat` shows a **"The publisher could not be verified"** warning when opened. "Unblock" removes the mark up front, so you never see the warning.
+>
+> If you skip this step, that's fine: click **Run** on the first warning. On its first run the launcher removes the mark from every file in its folder, and the warning won't come back.
 
 ### 2. Folder layout
 
@@ -146,8 +140,7 @@ The extracted folder should look like this:
 
 ```
 JerbDpiDiscord\
-├── JerbDpiDiscord.exe           ← the launcher (in the release zip and installer)
-├── Baslat.bat                   ← bat file doing the same
+├── Baslat.bat                   ← the launcher, double-click this
 ├── LICENSE
 ├── README.md
 ├── README.en.md
@@ -163,7 +156,7 @@ JerbDpiDiscord\
     └── licenses\               ← GoodbyeDPI and WinDivert licenses
 ```
 
-The name of the main folder doesn't matter. Put it anywhere and name it anything. Just keep `JerbDpiDiscord.exe` (or `Baslat.bat`), `byedpi` and `goodbyedpi` next to each other.
+The name of the main folder doesn't matter. Put it anywhere and name it anything. Just keep `Baslat.bat`, `byedpi` and `goodbyedpi` next to each other.
 
 > **Want newer versions?** Download [ByeDPI](https://github.com/hufrea/byedpi/releases) and [GoodbyeDPI](https://github.com/ValdikSS/GoodbyeDPI/releases) from their official pages and put the files in the same places. GoodbyeDPI also works from a `goodbyedpi\x86_64\` subfolder.
 
@@ -223,7 +216,7 @@ I also recommend turning on **"Minimize to tray"** in the same place.
 
 ## Usage
 
-1. Double-click **`JerbDpiDiscord.exe`** (or the **Jerb-DpiDiscord** desktop shortcut if you used the installer), or **`Baslat.bat`**.
+1. Double-click **`Baslat.bat`**. (If "The publisher could not be verified" appears the first time, click **Run**; see [Installation](#installation).)
 2. Windows asks for administrator permission. Click **Yes**.
 3. A **Discord icon** appears in the system tray (next to the clock). The dot in its corner is **yellow**.
 4. Discord starts and checks for updates. Hover over the icon to see the status.
@@ -413,7 +406,7 @@ The launcher runs with administrator rights, loads a network driver and, if you 
 ### Read the code yourself
 
 The launcher is made entirely of plain text files. There is no hidden compiled part:
-- `Baslat.bat` and `JerbDpiDiscord.exe`: only start `discord.ps1` hidden. The exe's source code is in `kaynak/launcher.c` (about 60 lines).
+- `Baslat.bat`: only starts `discord.ps1` hidden.
 - `byedpi/discord.ps1`: the script that does everything. Open it in Notepad and read every line. The code comments are in Turkish.
 
 The launcher only connects to the internet for: Discord's own servers (connection test and downloading the Discord installer) and Cloudflare (1.1.1.1) for DNS. It collects no data and sends nothing anywhere.
@@ -451,42 +444,16 @@ Some antivirus programs (including Windows Defender) may flag files in this proj
 
 - The **WinDivert** driver hooks into network traffic at kernel level. Because the same driver is also used by some malware, antivirus programs may flag the driver itself. WinDivert is an open source, legitimate tool.
 - **DPI bypass tools** (GoodbyeDPI, ByeDPI) modify network packets, so some antivirus programs show a generic "HackTool" or "RiskWare" warning. That doesn't mean it's a virus; it means "this tool modifies network traffic".
-- A **PowerShell script running hidden** and a `.bat` or `.exe` file **asking for administrator rights** can also look suspicious to some security software.
-- `JerbDpiDiscord.exe` and the installer are **not digitally signed** (signing certificates cost money). So Windows SmartScreen may say "Windows protected your PC" on first run: **More info → Run anyway.** You can check the files are unmodified with the SHA-256 hashes on the release page.
+- A **PowerShell script running hidden** and a `.bat` file **asking for administrator rights** can also look suspicious to some security software.
 
 **What to do:**
 1. First verify the files with the SHA-256 hashes above.
 2. If you like, upload the files to [VirusTotal](https://www.virustotal.com/) to see the results of dozens of antivirus engines together. A few engines saying "HackTool" is normal for tools like these.
 3. If you trust it, add the project folder to your antivirus **exclusions**. In Windows Defender: **Windows Security → Virus & threat protection → Manage settings → Exclusions → Add an exclusion → Folder.**
 
-### Build the exe and installer yourself
-
-Instead of trusting the exe, zip and installer from Releases, you can build them yourself. All sources are in the `kaynak/` folder:
-
-| File | What |
-|---|---|
-| `kaynak/launcher.c` | Source code of `JerbDpiDiscord.exe` |
-| `kaynak/launcher.rc`, `app.manifest`, `simge.ico` | Icon, version info and admin rights setting |
-| `kaynak/setup.nsi` | The installer (NSIS) |
-| `kaynak/tekdosya.nsi` | Single-file exe (NSIS) |
-| `kaynak/derle.sh` | Script that builds everything with one command |
-
-On Linux (or WSL on Windows):
-```sh
-sudo apt install gcc-mingw-w64-x86-64 nsis zip
-sh kaynak/derle.sh 1.0.0
-```
-Output goes to the `cikti/` folder.
-
 ---
 
 ## Uninstalling
-
-**If you used the installer:** First, if the launcher changed your DNS, choose **DNS → Eski haline döndür** (Restore previous) in the menu. Then **Settings → Apps → Jerb-DpiDiscord → Uninstall.** The uninstaller removes the launcher, the autostart task and its settings files.
-
-**If you used the single-file exe:** Follow the steps below; in step 4 delete the `%LocalAppData%\JerbDpiDiscord` folder.
-
-**If you use the portable version or run from source:**
 
 1. Untick **"Bilgisayar açılınca başlat"** (Start with Windows) in the menu (removes the task).
 2. If the launcher changed your DNS, choose **DNS → Eski haline döndür** (Restore previous).

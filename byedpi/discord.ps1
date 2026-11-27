@@ -56,6 +56,14 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     exit
 }
 
+# İnternetten indirilen dosyalardaki "internetten geldi" işaretini kaldır
+# (yoksa Baslat.bat her açılışta "Yayımcı doğrulanamadı" uyarısı veriyor)
+# Sadece programın kendi dosyalarına dokunur: Baslat.bat, byedpi ve goodbyedpi klasörleri
+$anaKlasor = Split-Path $PSScriptRoot -Parent
+Unblock-File -Path (Join-Path $anaKlasor 'Baslat.bat')
+Get-ChildItem -Path $PSScriptRoot -Recurse -File | Unblock-File
+Get-ChildItem -Path (Join-Path $anaKlasor 'goodbyedpi') -Recurse -File | Unblock-File
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -Namespace Win32 -Name Native -MemberDefinition '[DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr h);'
