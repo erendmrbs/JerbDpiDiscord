@@ -130,7 +130,7 @@ Güncelleme kontrolünün bittiği şu yollardan biriyle anlaşılıyor:
 |---|---|
 | **`JerbDpiDiscord-vX-Kurulum.exe`** (önerilen) | Normal kurulum. Program Files'a kurar, Başlat menüsüne ve masaüstüne kısayol ekler, **Ayarlar → Uygulamalar**'dan kaldırılabilir. |
 | **`JerbDpiDiscord-vX-Tasinabilir.zip`** | Kurulum istemiyorsan. İstediğin klasöre çıkar, içindeki `JerbDpiDiscord.exe` dosyasını çalıştır. USB bellekte de taşıyabilirsin. |
-| **`JerbDpiDiscord.exe`** | Sadece başlatıcının kendisi. Tek başına çalışmaz, `byedpi` ve `goodbyedpi` klasörlerinin yanında olmalı. Kaynak koddan kuranlar `Baslat.bat` yerine bunu kullanmak isterse diye var. |
+| **`JerbDpiDiscord-vX-TekDosya.exe`** | Tek dosya, kurulum yok. Çift tıklayınca her şeyi `%LocalAppData%\JerbDpiDiscord` klasörüne çıkarıp başlatıcıyı açıyor. Yeni sürümünü çalıştırınca o klasördeki dosyaları güncelliyor, ayarlarına dokunmuyor. |
 
 ByeDPI ve GoodbyeDPI hepsinin içinde geliyor, ayrıca bir şey indirmene gerek yok.
 
@@ -466,6 +466,7 @@ Release'teki exe, zip ve kurulum programına güvenmek yerine kendin de derleyeb
 | `kaynak/launcher.c` | `JerbDpiDiscord.exe`'nin kaynak kodu |
 | `kaynak/launcher.rc`, `app.manifest`, `simge.ico` | Simge, sürüm bilgisi ve yönetici izni ayarı |
 | `kaynak/setup.nsi` | Kurulum programı (NSIS) |
+| `kaynak/tekdosya.nsi` | Tek dosya exe (NSIS) |
 | `kaynak/derle.sh` | Hepsini tek komutla derleyen betik |
 
 Linux'ta (ya da Windows'ta WSL ile):
@@ -480,6 +481,8 @@ sh kaynak/derle.sh 1.0.0
 ## Kaldırma
 
 **Kurulum yaptıysan:** Önce DNS ayarını başlatıcı değiştirdiyse menüden **DNS → Eski haline döndür** seç. Sonra **Ayarlar → Uygulamalar → Jerb-DpiDiscord → Kaldır.** Kaldırma programı başlatıcıyı, otomatik başlatma görevini ve ayar dosyalarını siliyor.
+
+**Tek dosya exe kullandıysan:** Aşağıdaki adımları uygula, 4. adımda `%LocalAppData%\JerbDpiDiscord` klasörünü sil.
 
 **Taşınabilir ya da kaynak koddan kullanıyorsan:**
 

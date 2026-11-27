@@ -27,8 +27,8 @@ rm -f "$PAKET/byedpi/byedpi_ayar.txt" "$PAKET/byedpi/sessiz_mod.txt" "$PAKET/bye
 # 4) Kurulum programı
 makensis -V2 -DSURUM="$SURUM" -DPAKET="$PAKET" -DCIKTI="$CIKTI/JerbDpiDiscord-v$SURUM-Kurulum.exe" setup.nsi
 
-# 5) Tek başına exe (release için kopyası)
-cp "$PAKET/JerbDpiDiscord.exe" "$CIKTI/JerbDpiDiscord.exe"
+# 5) Tek dosya exe (her şeyi içinde taşır, %LocalAppData%'ya çıkarıp açar)
+makensis -V2 -DSURUM="$SURUM" -DPAKET="$PAKET" -DCIKTI="$CIKTI/JerbDpiDiscord-v$SURUM-TekDosya.exe" tekdosya.nsi
 
-cd "$CIKTI" && sha256sum JerbDpiDiscord-v$SURUM-Kurulum.exe JerbDpiDiscord-v$SURUM-Tasinabilir.zip JerbDpiDiscord.exe > SHA256SUMS.txt
+cd "$CIKTI" && sha256sum JerbDpiDiscord-v$SURUM-Kurulum.exe JerbDpiDiscord-v$SURUM-Tasinabilir.zip JerbDpiDiscord-v$SURUM-TekDosya.exe > SHA256SUMS.txt
 cat SHA256SUMS.txt
