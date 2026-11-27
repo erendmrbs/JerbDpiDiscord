@@ -110,43 +110,43 @@ Güncelleme kontrolünün bittiği şu yollardan biriyle anlaşılıyor:
 - **Yönetici yetkisi** (GoodbyeDPI'ın sürücüsü için gerekli. Başlatıcı izni kendisi istiyor.)
 - **Windows PowerShell 5.1** (Windows'ta hazır geliyor)
 - **curl** (Windows 10 1803 ve sonrasında hazır geliyor)
-- [**ByeDPI**](https://github.com/hufrea/byedpi) Windows sürümü
-- [**GoodbyeDPI**](https://github.com/ValdikSS/GoodbyeDPI)
+- ByeDPI ve GoodbyeDPI (depoyla birlikte geliyor)
 - **Şifreli DNS (DNS over HTTPS)** ayarı (başlatıcı kendisi yapabiliyor, Windows 11 gerekiyor)
 
 ---
 
 ## Kurulum
 
-### 1. Dosyaları indir
+### 1. İndir
 
-Bu depoyu indir (yeşil **Code** butonu → **Download ZIP**) ve bir klasöre çıkar.
+Bu depoyu indir: yeşil **Code** butonu → **Download ZIP**. İstediğin bir klasöre çıkar.
 
-ByeDPI ve GoodbyeDPI kendi resmi sayfalarından indirilmeli:
-
-- **ByeDPI:** [Releases](https://github.com/hufrea/byedpi/releases) sayfasından `byedpi-XX-x86_64-w64.zip` dosyasını indir. (`.tar.gz` olanlar Linux için, `i686` olan 32 bit Windows için.)
-- **GoodbyeDPI:** [Releases](https://github.com/ValdikSS/GoodbyeDPI/releases) sayfasından son sürümü indir.
+ByeDPI ve GoodbyeDPI **depoyla birlikte geliyor**, ayrıca bir şey indirmene gerek yok.
 
 ### 2. Klasör düzeni
 
-Dosyaları şu şekilde yerleştir:
+Zip'ten çıkan klasör şöyle görünmeli:
 
 ```
-DiscordBaslatici\
+JerbDpiDiscord\
 ├── Baslat.bat
+├── LICENSE
+├── README.md
 ├── byedpi\
-│   ├── ciadpi.exe               ← ByeDPI zip'inden
-│   └── discord_tepsi.ps1        ← bu depodan
+│   ├── ciadpi.exe               ← ByeDPI 17.3 (64 bit)
+│   ├── discord_tepsi.ps1        ← başlatıcının kendisi
+│   └── LICENSE-byedpi.txt
 └── goodbyedpi\
-    ├── goodbyedpi.exe           ← GoodbyeDPI'ın x86_64 klasöründen
-    ├── WinDivert.dll            ← GoodbyeDPI'ın x86_64 klasöründen
-    ├── WinDivert64.sys          ← GoodbyeDPI'ın x86_64 klasöründen
-    └── discord.txt              ← bu depodan
+    ├── goodbyedpi.exe           ← GoodbyeDPI 0.2.3rc3 (64 bit)
+    ├── WinDivert.dll
+    ├── WinDivert64.sys
+    ├── discord.txt              ← GoodbyeDPI'ın sadece dokunacağı Discord adresleri
+    └── licenses\               ← GoodbyeDPI ve WinDivert lisansları
 ```
 
-> GoodbyeDPI dosyalarını `goodbyedpi\x86_64\` klasörünün içinde bırakırsan da çalışır. Bu durumda `discord.txt` dosyası yine `goodbyedpi\` klasörünün kendisinde dursun.
+Ana klasörün adı önemli değil. İstediğin yere koyabilir, istediğin adı verebilirsin. Sadece `Baslat.bat`, `byedpi` ve `goodbyedpi` yan yana kalsın.
 
-Ana klasörün adı önemli değil. İstediğin yere koyabilir, istediğin adı verebilirsin.
+> **Daha yeni sürüm kullanmak istersen:** [ByeDPI](https://github.com/hufrea/byedpi/releases) ve [GoodbyeDPI](https://github.com/ValdikSS/GoodbyeDPI/releases) dosyalarını resmi sayfalarından indirip aynı yerlere koyabilirsin. GoodbyeDPI dosyalarını `goodbyedpi\x86_64\` klasörünün içine koyarsan da çalışır.
 
 ### 3. DNS ayarı (başlatıcı kendisi yapıyor)
 
@@ -390,17 +390,29 @@ Bu araç, aşağıdaki açık kaynak projelerin üzerine kurulu bir başlatıcı
 - [**GoodbyeDPI**](https://github.com/ValdikSS/GoodbyeDPI): ValdikSS
 - [**WinDivert**](https://github.com/basil00/WinDivert): basil00
 
-ByeDPI ve GoodbyeDPI dosyaları bu depoda bulunmaz. Kendi resmi sayfalarından indirilmeli ve kendi lisanslarına tabidir.
+Kolay kurulum için bu programların derlenmiş Windows sürümleri, kendi lisanslarıyla birlikte, değiştirilmeden bu depoya eklenmiştir:
+
+| Program | Sürüm | Lisans | Lisans dosyası |
+|---|---|---|---|
+| ByeDPI | 17.3 (x86_64) | MIT | `byedpi/LICENSE-byedpi.txt` |
+| GoodbyeDPI | 0.2.3rc3 (x86_64) | Apache 2.0 | `goodbyedpi/licenses/LICENSE-goodbyedpi.txt` |
+| WinDivert | GoodbyeDPI ile gelen | LGPL v3 | `goodbyedpi/licenses/LICENSE-windivert.txt` |
+
+Kaynak kodlarına yukarıdaki bağlantılardan ulaşabilirsin.
 
 ---
 
 ## Lisans
 
-Bu proje **MIT Lisansı** ile açık kaynaktır. Ayrıntılar için [LICENSE](LICENSE) dosyasına bak.
+**Jerb-DpiDiscord**'un kendi kodu (`Baslat.bat`, `byedpi/discord_tepsi.ps1`) **GNU Genel Kamu Lisansı v3.0 (GPL-3.0)** ile açık kaynaktır. Ayrıntılar için [LICENSE](LICENSE) dosyasına bak.
 
-Kısaca: Kodu ücretsiz olarak kullanabilir, değiştirebilir, dağıtabilir ve kendi projelerinde (ticari olanlar dahil) kullanabilirsin. Tek şart, telif hakkı ve lisans metnini kodla birlikte tutman. Yazılım herhangi bir garanti olmadan sunulur.
+Kısaca:
+- ✅ Kodu ücretsiz kullanabilir, inceleyebilir, değiştirebilir ve paylaşabilirsin.
+- ✅ Değiştirilmiş sürümünü de dağıtabilirsin, ama **aynı GPL-3.0 lisansıyla ve kaynak koduyla birlikte** paylaşmak zorundasın.
+- ❌ Bu kodu alıp kapalı kaynak bir programa çeviremezsin.
+- ⚠️ Yazılım hiçbir garanti olmadan sunulur.
 
-ByeDPI, GoodbyeDPI ve WinDivert bu lisansa dahil değildir. Her biri kendi lisansına tabidir.
+Depoya eklenen ByeDPI, GoodbyeDPI ve WinDivert bu lisansın kapsamında değildir. Her biri kendi lisansına tabidir (bkz. [Teşekkürler](#teşekkürler)).
 
 ---
 
