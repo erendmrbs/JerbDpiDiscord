@@ -22,12 +22,37 @@ $BAGIS_ADRESI  = 'https://github.com/sponsors/erendmrbs'
 $ErrorActionPreference = 'SilentlyContinue'
 $ProgressPreference    = 'SilentlyContinue'
 
+# Olay kayıtları: bağlantı kopmalarının ve hataların nedenini bulmak için
+$script:olayLog = Join-Path $PSScriptRoot 'baslatici.log'
+
+function Kaydet($mesaj) {
+    $satir = "{0}  {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $mesaj
+    Add-Content -Path $script:olayLog -Value $satir -Encoding UTF8
+}
+
+# PowerShell'in topladığı hataları kayda yaz ve listeyi temizle
+function HatalariKaydet($nerede) {
+    foreach ($h in @($Error)) {
+        $konum = ''
+        if ($h.InvocationInfo) { $konum = " (satır $($h.InvocationInfo.ScriptLineNumber))" }
+        Kaydet "HATA [$nerede]$konum $($h.ToString())"
+    }
+    $Error.Clear()
+}
+
+# Kayıt dosyası çok büyümesin (500 KB'ı geçerse son 2000 satır kalsın)
+if ((Test-Path $script:olayLog) -and ((Get-Item $script:olayLog).Length -gt 500KB)) {
+    $son = Get-Content $script:olayLog -Tail 2000 -Encoding UTF8
+    Set-Content -Path $script:olayLog -Value $son -Encoding UTF8
+}
+
 # Yönetici değilse kendini yönetici olarak yeniden başlat
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     $ekArg = ''
     if ($Gizli) { $ekArg = ' -Gizli' }
     Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`"$ekArg"
+    HatalariKaydet 'yetki yükseltme'
     exit
 }
 
@@ -46,6 +71,8 @@ $script:asama       = 'baslangic'
 $script:sonBaslatma = Get-Date
 
 # Denenecek ByeDPI ayarları (ilk çalışan kaydedilir)
+$script:byedpiBaglantiSiniri = 4096
+
 $script:onAyarlar = @(
     '--disorder 1 --tlsrec 1+s',
     '--split 1+s --disorder 3+s',
@@ -131,7 +158,8 @@ function Renk($renk) {
 # --- ByeDPI ---
 
 function ByeDpiBaslat {
-    Start-Process $script:ciadpi -ArgumentList "-i 127.0.0.1 -p 1080 $script:byedpiAyar" -WindowStyle Hidden
+    # -c: aynı anda en fazla kaç bağlantı (varsayılan 512, Discord'a yetmeyebiliyor)
+    Start-Process $script:ciadpi -ArgumentList "-i 127.0.0.1 -p 1080 -c $script:byedpiBaglantiSiniri $script:byedpiAyar" -WindowStyle Hidden
     Start-Sleep -Seconds 1
 }
 
@@ -144,6 +172,11 @@ function ByeDpiYenidenBaslat($ayar) {
     Start-Sleep -Milliseconds 500
     $script:byedpiAyar = $ayar
     ByeDpiBaslat
+}
+
+# ByeDPI'a şu an açık bağlantı sayısı
+function ByeDpiBaglantiSayisi {
+    return @(Get-NetTCPConnection -LocalPort 1080 -State Established).Count
 }
 
 # ByeDPI üzerinden Discord'a ulaşılabiliyor mu?
@@ -609,8 +642,12 @@ $menu.add_Opening({
 })
 
 $yenidenOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Discord'u yeniden başlat")
-$yenidenOgesi.add_Click({ DiscordBaslat })
+$yenidenOgesi.add_Click({ Kaydet "Discord yeniden başlatılıyor (kullanıcı isteği)"; DiscordBaslat })
 $menu.Items.Add($yenidenOgesi) | Out-Null
+
+$programOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Programı yeniden başlat')
+$programOgesi.add_Click({ ProgramiYenidenBaslat })
+$menu.Items.Add($programOgesi) | Out-Null
 
 $ayarBulOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('ByeDPI ayarını otomatik bul')
 $ayarBulOgesi.add_Click({
@@ -622,6 +659,13 @@ $ayarBulOgesi.add_Click({
     }
 })
 $menu.Items.Add($ayarBulOgesi) | Out-Null
+
+$kayitOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Kayıtları aç')
+$kayitOgesi.add_Click({
+    if (-not (Test-Path $script:olayLog)) { Kaydet 'Kayıt dosyası oluşturuldu' }
+    Start-Process notepad.exe $script:olayLog
+})
+$menu.Items.Add($kayitOgesi) | Out-Null
 
 $onarOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Sürücü hatasını onar')
 $onarOgesi.add_Click({ SurucuOnar })
@@ -761,9 +805,28 @@ if (-not (DiscordBul)) {
     Bildirim 'Discord kuruldu' 'Discord açılıyor...'
 }
 
+Kaydet "Başlatıcı açıldı (gizli: $script:gizliBaslat, ByeDPI ayarı: $script:byedpiAyar)"
 if ($script:gizliBaslat) { DiscordBaslat -Kucuk } else { DiscordBaslat }
+HatalariKaydet 'açılış'
 
 $script:ctx = New-Object System.Windows.Forms.ApplicationContext
+
+# Başlatıcının tamamını yeniden başlat (Discord, ByeDPI ve GoodbyeDPI dahil)
+function ProgramiYenidenBaslat {
+    Kaydet 'Program yeniden başlatılıyor (kullanıcı isteği)'
+    $zamanlayici.Stop()
+    Get-Process Discord | Stop-Process -Force
+    GoodbyeDpiKapat
+    Get-Process ciadpi | Stop-Process -Force
+    TepsiKaldir
+    if ($script:sonHicon -ne [IntPtr]::Zero) { [Win32.Native]::DestroyIcon($script:sonHicon) | Out-Null }
+    # Yeni kopyanın açılabilmesi için kilidi bırak
+    $mutex.ReleaseMutex()
+    $mutex.Dispose()
+    $script:mutexBirakildi = $true
+    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script:betikYolu`"" -WindowStyle Hidden
+    $script:ctx.ExitThread()
+}
 
 function Bitir {
     $zamanlayici.Stop()
@@ -791,12 +854,14 @@ $zamanlayici.add_Tick({
 
         # ByeDPI çöktüyse yeniden aç
         if (-not (Get-Process ciadpi)) {
+            Kaydet 'ByeDPI kapanmış bulundu, yeniden başlatılıyor'
             ByeDpiAc
             Bildirim 'ByeDPI yeniden başlatıldı' 'ByeDPI kapanmıştı, tekrar açıldı.' 'Warning'
         }
 
         # Discord kendini proxy'siz açtıysa düzelt (başlatmadan sonraki ilk 15 saniye hariç)
         if (((Get-Date) - $script:sonBaslatma).TotalSeconds -gt 15 -and (ProxysizDiscordVarMi)) {
+            Kaydet "Discord proxy'siz açılmış bulundu, yeniden başlatılıyor"
             Bildirim "Discord proxy'siz açılmıştı" 'ByeDPI ile yeniden açılıyor...' 'Warning'
             DiscordBaslat
             return
@@ -824,6 +889,7 @@ $zamanlayici.add_Tick({
             $script:sayac = 0
             Renk 'kirmizi'
             Durum 'güncelleme bitmedi'
+            Kaydet 'Güncelleme kontrolü 2 dakikada bitmedi'
             Bildirim 'Discord güncellenemedi' "Güncelleme kontrolü 2 dakikada bitmedi, GoodbyeDPI kapatıldı.`nTepsiden 'Discord'u yeniden başlat'ı dene." 'Warning'
         }
         else {
@@ -837,6 +903,8 @@ $zamanlayici.add_Tick({
             $script:sayac = 0
             Renk 'yesil'
             Durum 'Discord ByeDPI ile çalışıyor'
+            Kaydet 'Discord hazır, GoodbyeDPI kapatıldı'
+            HatalariKaydet 'güncelleme'
             if (-not $script:kucukAcildi) {
                 Bildirim 'Discord hazır' 'Discord ByeDPI ile çalışıyor.'
             }
@@ -849,14 +917,33 @@ $zamanlayici.add_Tick({
             if ($script:yok -ge 2) { Bitir; return }
         }
 
-        # Hazır olduktan 10 saniye sonra ve sonra her 5 dakikada bir bağlantıyı test et
-        if ($script:sayac -eq 10 -or ($script:sayac -gt 10 -and $script:sayac % 300 -eq 0)) {
+        # Hazır olduktan 10 saniye sonra ve sonra her dakika bağlantıyı test et
+        if ($script:sayac -eq 10 -or ($script:sayac -gt 10 -and $script:sayac % 60 -eq 0)) {
+            $baglanti = ByeDpiBaglantiSayisi
             if (-not (ByeDpiTest)) {
                 Start-Sleep -Seconds 2
                 if (-not (ByeDpiTest)) {
-                    Bildirim 'Bağlantı koptu' 'ByeDPI çalışan bir ayar arıyor...' 'Warning'
-                    ByeDpiAyarBul | Out-Null
+                    Kaydet "Bağlantı testi başarısız (ByeDPI'a açık bağlantı: $baglanti, ayar: $script:byedpiAyar)"
+
+                    # Önce sadece ByeDPI'ı aynı ayarla yeniden başlat (elle yeniden başlatmanın düzelttiği durum)
+                    ByeDpiYenidenBaslat $script:byedpiAyar
+                    Start-Sleep -Seconds 1
+                    if (ByeDpiTest) {
+                        Kaydet "ByeDPI yeniden başlatılınca bağlantı düzeldi ($($script:sonGecikme) ms)"
+                        Bildirim 'Bağlantı düzeltildi' "ByeDPI takılmıştı, yeniden başlatıldı." 'Warning'
+                        Renk 'yesil'
+                        Durum 'Discord ByeDPI ile çalışıyor'
+                    }
+                    else {
+                        Kaydet 'Yeniden başlatma yetmedi, başka ByeDPI ayarı aranıyor'
+                        Bildirim 'Bağlantı koptu' 'ByeDPI çalışan bir ayar arıyor...' 'Warning'
+                        if (ByeDpiAyarBul) { Kaydet "Çalışan ayar bulundu: $script:byedpiAyar" }
+                        else               { Kaydet "Hiçbir ayar çalışmadı" }
+                    }
                 }
+            }
+            elseif ($baglanti -gt ($script:byedpiBaglantiSiniri * 0.8)) {
+                Kaydet "Uyarı: ByeDPI bağlantı sınırına yaklaşıyor ($baglanti / $script:byedpiBaglantiSiniri)"
             }
             elseif ($script:tepsi -and $script:durumOgesi.Text -ne 'Durum: Discord ByeDPI ile çalışıyor') {
                 Renk 'yesil'
@@ -868,4 +955,5 @@ $zamanlayici.add_Tick({
 
 $zamanlayici.Start()
 [System.Windows.Forms.Application]::Run($script:ctx)
-$mutex.ReleaseMutex()
+HatalariKaydet 'kapanış'
+if (-not $script:mutexBirakildi) { $mutex.ReleaseMutex() }
