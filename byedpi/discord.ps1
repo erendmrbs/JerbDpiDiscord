@@ -69,7 +69,10 @@ Get-ChildItem -Path (Join-Path $anaKlasor 'goodbyedpi') -Recurse -File | Unblock
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-Add-Type -Namespace Win32 -Name Native -MemberDefinition '[DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr h);'
+Add-Type -Namespace Win32 -Name Native -MemberDefinition @'
+[DllImport("user32.dll")] public static extern bool DestroyIcon(IntPtr h);
+[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern IntPtr FindWindow(string sinif, string baslik);
+'@
 
 # Mesaj pencereleri her zaman en önde açılsın (yoksa başka pencerelerin arkasında kalıp görünmüyor)
 Add-Type -ReferencedAssemblies System.Windows.Forms, System.Drawing -TypeDefinition @'
@@ -801,6 +804,13 @@ function Bitir {
 # Tepsi simgesi ve menü
 # ---------------------------------------------------------------------------
 
+# Bilgisayar yeni açıldıysa görev çubuğu henüz hazır olmayabilir; hazır olmadan eklenen
+# tepsi simgesi hiç görünmüyor. Görev çubuğu penceresi oluşana kadar bekle (en fazla 2 dakika).
+for ($i = 0; $i -lt 120 -and [Win32.Native]::FindWindow('Shell_TrayWnd', $null) -eq [IntPtr]::Zero; $i++) {
+    Start-Sleep -Seconds 1
+}
+if ($script:gizliBaslat) { Start-Sleep -Seconds 3 }
+
 $script:tepsi = New-Object System.Windows.Forms.NotifyIcon
 $script:tepsi.Text = 'Discord Başlatıcı'
 Renk 'sari'
@@ -1046,6 +1056,12 @@ $zamanlayici.Interval = 1000
 $zamanlayici.add_Tick({
     $script:tik++
     $script:sayac++
+
+    # Bilgisayar açılışında simge kaybolmuş olabilir: 15., 45. ve 90. saniyede simgeyi yeniden ekle
+    if ($script:gizliBaslat -and $script:tepsi -and ($script:tik -eq 15 -or $script:tik -eq 45 -or $script:tik -eq 90)) {
+        $script:tepsi.Visible = $false
+        $script:tepsi.Visible = $true
+    }
 
     # 3 saniyede bir: ByeDPI ve proxy'siz Discord kontrolü
     if ($script:tik % 3 -eq 0) {
