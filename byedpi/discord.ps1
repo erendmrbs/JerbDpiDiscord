@@ -1411,8 +1411,8 @@ $script:zamanlayiciTuru = {
             $script:sayac = 0
             Renk 'kirmizi'
             Durum 'güncelleme bitmedi'
-            Kaydet 'Güncelleme kontrolü 2 dakikada bitmedi'
-            Bildirim 'Discord güncellenemedi' "Güncelleme kontrolü 2 dakikada bitmedi, GoodbyeDPI kapatıldı.`nTepsiden 'Discord'u yeniden başlat'ı dene." 'Warning'
+            Kaydet 'Güncelleme kontrolü hiçbir GoodbyeDPI ayarıyla geçmedi'
+            Bildirim 'Discord güncellenemedi' "Güncelleme kontrolü hiçbir GoodbyeDPI ayarıyla geçmedi, GoodbyeDPI kapatıldı.`nTepsiden 'Discord'u yeniden başlat'ı dene." 'Warning'
         }
         else {
             Durum "güncelleme bekleniyor ($($script:sayac) sn)"

@@ -305,7 +305,6 @@ Otomatik başlatma açıldığında `%LocalAppData%\DiscordBaslatici\` klasörü
 | `dns_yedek.json` | `%LocalAppData%\DiscordBaslatici\` | Başlatıcı değiştirmeden önceki DNS ayarın |
 | `bulucu.ps1` | `%LocalAppData%\DiscordBaslatici\` | Otomatik başlatmada başlatıcıyı bulan betik |
 | `yol.txt` | `%LocalAppData%\DiscordBaslatici\` | Başlatıcının son bilinen yeri |
-| `discord_baslat.log` | `%TEMP%\` | Son açılıştaki Discord kayıtları (sorun giderme için) |
 | `DiscordSetup.exe` | `%TEMP%\` | Discord kurulu değilse indirilen kurulum dosyası |
 
 Ayarları sıfırlamak istersen `byedpi_ayar.txt` ve `goodbyedpi_ayar.txt` dosyalarını silmen yeterli.
@@ -363,7 +362,7 @@ Adres `162.159.` ile başlamıyorsa DNS ayarına git ve DNS over HTTPS'in altın
 
 ### Simge sarıda kalıyor, sonra kırmızıya dönüyor ("güncelleme bitmedi")
 
-Güncelleme kontrolü 2 dakika içinde bitmemiş. Bu durumda GoodbyeDPI güvenlik için kapatılıyor. Menüden **"Discord'u yeniden başlat"** dene. Sorun devam ederse `%TEMP%\discord_baslat.log` dosyasına bak.
+Başlatıcı GoodbyeDPI-Turkey paketindeki 7 ayarın hepsini denemiş (her birine 20 saniye), hiçbiriyle güncelleme kontrolü geçmemiş. Bu durumda GoodbyeDPI güvenlik için kapatılıyor. Menüden **"Discord'u yeniden başlat"** dene. Sorun devam ederse **"Kayıtları aç"** ile kayıt dosyasına bak.
 
 ### Başlatıcı hiç açılmıyor
 

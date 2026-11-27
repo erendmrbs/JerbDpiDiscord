@@ -307,7 +307,6 @@ When autostart is turned on, a small **finder** script is placed in `%LocalAppDa
 | `dns_yedek.json` | `%LocalAppData%\DiscordBaslatici\` | Your DNS settings before the launcher changed them |
 | `bulucu.ps1` | `%LocalAppData%\DiscordBaslatici\` | The finder script used at startup |
 | `yol.txt` | `%LocalAppData%\DiscordBaslatici\` | The launcher's last known location |
-| `discord_baslat.log` | `%TEMP%\` | Discord's log from the last start (for troubleshooting) |
 | `DiscordSetup.exe` | `%TEMP%\` | The Discord installer, downloaded if Discord isn't installed |
 
 To reset the settings, just delete `byedpi_ayar.txt` and `goodbyedpi_ayar.txt`.
@@ -365,7 +364,7 @@ If the address doesn't start with `162.159.`, open your DNS settings and turn **
 
 ### The icon stays yellow, then turns red ("güncelleme bitmedi" / update didn't finish)
 
-The update check didn't finish within 2 minutes, so GoodbyeDPI was stopped for safety. Try **"Discord'u yeniden başlat"** (Restart Discord) from the menu. If the problem continues, look at `%TEMP%\discord_baslat.log`.
+The launcher tried all 7 settings from the GoodbyeDPI-Turkey package (20 seconds each) and the update check didn't get through with any of them, so GoodbyeDPI was stopped for safety. Try **"Discord'u yeniden başlat"** (Restart Discord) from the menu. If the problem continues, check the log with **"Kayıtları aç"** (Open log).
 
 ### The launcher doesn't start at all
 
