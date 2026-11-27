@@ -334,6 +334,18 @@ Bu engelin aşıldığını ama sağlayıcının engel sayfasına bağlandığı
 - Hiçbir ayar çalışmazsa simge kırmızıya döner. İnternet bağlantını ve DNS ayarını kontrol et.
 - Sağlayıcı engelleme yöntemini değiştirmiş olabilir. `discord.ps1` içindeki `$script:onAyarlar` listesine yeni ByeDPI parametreleri ekleyebilirsin.
 
+### Bir süre çalışıyor, sonra bağlantı kopuyor (yeniden başlatınca düzeliyor)
+
+En sık nedeni **DNS**. Şifreli DNS bir anlığına başarısız olunca Windows normal DNS'e geri dönebiliyor, sağlayıcı da o anda `discord.com` için sahte bir adres (örneğin `195.175.254.2`) veriyor. Başlatıcı açılırken çalışan GoodbyeDPI DNS'i geçici olarak düzelttiği için yeniden başlatmak sorunu birkaç dakikalığına çözüyor gibi görünüyor.
+
+Başlatıcı bunu her dakika kontrol ediyor. Sahte cevap görürse DNS önbelleğini temizliyor ve şifreli DNS ayarını yeniden uyguluyor. Elle kontrol etmek için:
+
+```powershell
+Resolve-DnsName discord.com -Type A | Select-Object -First 1 IPAddress
+```
+
+Adres `162.159.` ile başlamıyorsa DNS ayarına git ve DNS over HTTPS'in altındaki **"Düz metne geri dön"** (Fallback to plaintext) seçeneğini **Kapalı** yap.
+
 ### Simge sarıda kalıyor, sonra kırmızıya dönüyor ("güncelleme bitmedi")
 
 Güncelleme kontrolü 2 dakika içinde bitmemiş. Bu durumda GoodbyeDPI güvenlik için kapatılıyor. Menüden **"Discord'u yeniden başlat"** dene. Sorun devam ederse `%TEMP%\discord_baslat.log` dosyasına bak.

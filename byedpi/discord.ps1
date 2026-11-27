@@ -358,6 +358,39 @@ function DiscordProxyBaglantisiVarMi {
 
 # --- DNS ---
 
+# discord.com şu an hangi adrese çözülüyor?
+function DiscordAdresi {
+    $kayit = Resolve-DnsName -Name 'discord.com' -Type A -QuickTimeout |
+             Where-Object { $_.IPAddress } | Select-Object -First 1
+    if ($kayit) { return $kayit.IPAddress }
+    return $null
+}
+
+# DNS sahte cevap veriyorsa düzeltmeyi dene. Düzeldiyse $true döner.
+function DnsZehirlenmesiniDuzelt {
+    $adres = DiscordAdresi
+    if ($adres -like '162.159.*') { return $true }
+
+    Kaydet "DNS yanlış cevap veriyor: discord.com -> $adres (sağlayıcının engel adresi olabilir)"
+    Clear-DnsClientCache
+    Start-Sleep -Seconds 1
+    $adres = DiscordAdresi
+    if ($adres -like '162.159.*') {
+        Kaydet 'DNS önbelleği temizlenince düzeldi'
+        return $true
+    }
+
+    # DNS'i daha önce başlatıcı ayarladıysa (ya da şifreli DNS kuruluysa) ayarı sessizce yeniden uygula
+    if ((Test-Path $script:dnsYedekDosyasi) -or (Get-DnsClientDohServerAddress -ServerAddress '1.1.1.1')) {
+        if (DnsAyarla) {
+            Kaydet 'Şifreli DNS ayarı yeniden uygulandı, düzeldi'
+            return $true
+        }
+    }
+    Kaydet "DNS düzeltilemedi (discord.com -> $(DiscordAdresi))"
+    return $false
+}
+
 # discord.com doğru (Discord'un gerçek) adrese mi çözülüyor?
 function DnsDogruMu {
     Clear-DnsClientCache
@@ -923,14 +956,32 @@ $zamanlayici.add_Tick({
             if (-not (ByeDpiTest)) {
                 Start-Sleep -Seconds 2
                 if (-not (ByeDpiTest)) {
-                    Kaydet "Bağlantı testi başarısız (ByeDPI'a açık bağlantı: $baglanti, ayar: $script:byedpiAyar)"
+                    Kaydet "Bağlantı testi başarısız (ByeDPI'a açık bağlantı: $baglanti, ayar: $script:byedpiAyar, discord.com -> $(DiscordAdresi))"
 
-                    # Önce sadece ByeDPI'ı aynı ayarla yeniden başlat (elle yeniden başlatmanın düzelttiği durum)
-                    ByeDpiYenidenBaslat $script:byedpiAyar
-                    Start-Sleep -Seconds 1
-                    if (ByeDpiTest) {
-                        Kaydet "ByeDPI yeniden başlatılınca bağlantı düzeldi ($($script:sonGecikme) ms)"
-                        Bildirim 'Bağlantı düzeltildi' "ByeDPI takılmıştı, yeniden başlatıldı." 'Warning'
+                    # 1) Önce DNS: sağlayıcının sahte cevabı en sık neden
+                    $dnsDuzeldi = $false
+                    if ((DiscordAdresi) -notlike '162.159.*') {
+                        if (DnsZehirlenmesiniDuzelt) {
+                            ByeDpiYenidenBaslat $script:byedpiAyar
+                            Start-Sleep -Seconds 1
+                            $dnsDuzeldi = ByeDpiTest
+                        }
+                        else {
+                            Renk 'kirmizi'
+                            Durum 'DNS sahte cevap veriyor'
+                            Bildirim 'DNS engeli' "Sağlayıcının DNS'i Discord için sahte adres veriyor. Tepsi menüsünden DNS > 'DNS ayarını kontrol et / yap' seç." 'Error'
+                            return
+                        }
+                    }
+
+                    # 2) Sonra ByeDPI'ı aynı ayarla yeniden başlat
+                    if (-not $dnsDuzeldi) {
+                        ByeDpiYenidenBaslat $script:byedpiAyar
+                        Start-Sleep -Seconds 1
+                    }
+                    if ($dnsDuzeldi -or (ByeDpiTest)) {
+                        Kaydet "Bağlantı düzeldi ($($script:sonGecikme) ms)"
+                        Bildirim 'Bağlantı düzeltildi' 'Bağlantı koptu ve otomatik olarak düzeltildi.' 'Warning'
                         Renk 'yesil'
                         Durum 'Discord ByeDPI ile çalışıyor'
                     }
@@ -941,6 +992,10 @@ $zamanlayici.add_Tick({
                         else               { Kaydet "Hiçbir ayar çalışmadı" }
                     }
                 }
+            }
+            elseif ((DiscordAdresi) -notlike '162.159.*') {
+                # Bağlantı şimdilik çalışıyor ama DNS bozulmuş: önbellek bitince kopacak, şimdiden düzelt
+                DnsZehirlenmesiniDuzelt | Out-Null
             }
             elseif ($baglanti -gt ($script:byedpiBaglantiSiniri * 0.8)) {
                 Kaydet "Uyarı: ByeDPI bağlantı sınırına yaklaşıyor ($baglanti / $script:byedpiBaglantiSiniri)"

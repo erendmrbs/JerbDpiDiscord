@@ -336,6 +336,18 @@ This means the block was bypassed, but you reached your ISP's block page. The ca
 - If no setting works, the icon turns red. Check your internet connection and DNS.
 - Your ISP may have changed its blocking method. You can add new ByeDPI parameters to the `$script:onAyarlar` list in `discord.ps1`.
 
+### Works for a while, then the connection drops (restarting fixes it)
+
+The most common cause is **DNS**. When encrypted DNS briefly fails, Windows may fall back to plain DNS, and at that moment your ISP returns a fake address for `discord.com` (for example `195.175.254.2`). Restarting seems to fix it for a few minutes because GoodbyeDPI, which runs while the launcher starts, temporarily fixes DNS.
+
+The launcher checks this every minute. If it sees a fake answer, it clears the DNS cache and re-applies the encrypted DNS settings. To check by hand:
+
+```powershell
+Resolve-DnsName discord.com -Type A | Select-Object -First 1 IPAddress
+```
+
+If the address doesn't start with `162.159.`, open your DNS settings and turn **"Fallback to plaintext"** under DNS over HTTPS **Off**.
+
 ### The icon stays yellow, then turns red ("güncelleme bitmedi" / update didn't finish)
 
 The update check didn't finish within 2 minutes, so GoodbyeDPI was stopped for safety. Try **"Discord'u yeniden başlat"** (Restart Discord) from the menu. If the problem continues, look at `%TEMP%\discord_baslat.log`.
