@@ -54,7 +54,7 @@ GoodbyeDPI sadece birkaç saniye açık kalıyor, güncelleme kontrolü biter bi
  Baslat.bat
      │
      ▼
- discord_tepsi.ps1 (gizli, yönetici olarak)
+ discord.ps1 (gizli, yönetici olarak)
      │
      ├─► ByeDPI'ı gizli başlat (127.0.0.1:1080)
      │
@@ -134,7 +134,7 @@ JerbDpiDiscord\
 ├── README.md
 ├── byedpi\
 │   ├── ciadpi.exe               ← ByeDPI 17.3 (64 bit)
-│   ├── discord_tepsi.ps1        ← başlatıcının kendisi
+│   ├── discord.ps1        ← başlatıcının kendisi
 │   └── LICENSE-byedpi.txt
 └── goodbyedpi\
     ├── goodbyedpi.exe           ← GoodbyeDPI 0.2.3rc3 (64 bit)
@@ -322,7 +322,7 @@ Bu engelin aşıldığını ama sağlayıcının engel sayfasına bağlandığı
 
 - Menüden **"ByeDPI ayarını otomatik bul"** seç.
 - Hiçbir ayar çalışmazsa simge kırmızıya döner. İnternet bağlantını ve DNS ayarını kontrol et.
-- Sağlayıcı engelleme yöntemini değiştirmiş olabilir. `discord_tepsi.ps1` içindeki `$script:onAyarlar` listesine yeni ByeDPI parametreleri ekleyebilirsin.
+- Sağlayıcı engelleme yöntemini değiştirmiş olabilir. `discord.ps1` içindeki `$script:onAyarlar` listesine yeni ByeDPI parametreleri ekleyebilirsin.
 
 ### Simge sarıda kalıyor, sonra kırmızıya dönüyor ("güncelleme bitmedi")
 
@@ -404,7 +404,7 @@ Kaynak kodlarına yukarıdaki bağlantılardan ulaşabilirsin.
 
 ## Lisans
 
-**Jerb-DpiDiscord**'un kendi kodu (`Baslat.bat`, `byedpi/discord_tepsi.ps1`) **GNU Genel Kamu Lisansı v3.0 (GPL-3.0)** ile açık kaynaktır. Ayrıntılar için [LICENSE](LICENSE) dosyasına bak.
+**Jerb-DpiDiscord**'un kendi kodu (`Baslat.bat`, `byedpi/discord.ps1`) **GNU Genel Kamu Lisansı v3.0 (GPL-3.0)** ile açık kaynaktır. Ayrıntılar için [LICENSE](LICENSE) dosyasına bak.
 
 Kısaca:
 - ✅ Kodu ücretsiz kullanabilir, inceleyebilir, değiştirebilir ve paylaşabilirsin.

@@ -479,7 +479,7 @@ if (-not (Gecerli $yol)) {
     $yol = $null
     foreach ($aday in ($adaylar | Select-Object -Unique)) {
         if (-not (Test-Path $aday)) { continue }
-        $bulunan = Get-ChildItem -Path $aday -Filter 'discord_tepsi.ps1' -File -Recurse -Depth 4 |
+        $bulunan = Get-ChildItem -Path $aday -Filter 'discord.ps1' -File -Recurse -Depth 4 |
                    Where-Object { $_.FullName -notmatch '\\AppData\\' -and (Gecerli $_.FullName) } |
                    Sort-Object LastWriteTime -Descending | Select-Object -First 1
         if ($bulunan) { $yol = $bulunan.FullName; break }
