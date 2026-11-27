@@ -10,4 +10,3 @@ goodbyedpi/discord.txt text eol=crlf
 LICENSE* -text
 goodbyedpi/licenses/* -text
 *.ico binary
-*.sh text eol=lf
