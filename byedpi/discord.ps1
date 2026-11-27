@@ -36,6 +36,8 @@ function Kaydet($mesaj) {
 # PowerShell'in topladığı hataları kayda yaz ve listeyi temizle
 function HatalariKaydet($nerede) {
     foreach ($h in @($Error)) {
+        # "işlem bulunamadı", "dosya yok" gibi beklenen, zararsız hataları kayda yazma
+        if ("$($h.FullyQualifiedErrorId)" -match 'NoProcessFoundForGivenName|PathNotFound|ItemNotFound|CmdletizationQuery_NotFound|NoServiceFoundForGivenName') { continue }
         $konum = ''
         if ($h.InvocationInfo) { $konum = " (satır $($h.InvocationInfo.ScriptLineNumber))" }
         Kaydet "HATA [$nerede]$konum $($h.ToString())"
@@ -54,8 +56,17 @@ $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     $ekArg = ''
     if ($Gizli) { $ekArg = ' -Gizli' }
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`"$ekArg"
-    HatalariKaydet 'yetki yükseltme'
+    try {
+        Start-Process powershell.exe -Verb RunAs -ErrorAction Stop -ArgumentList "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$PSCommandPath`"$ekArg"
+    }
+    catch {
+        # Kullanıcı yönetici iznine "Hayır" dedi
+        Kaydet 'Yönetici izni verilmedi, başlatıcı açılmadı'
+        if (-not $Gizli) {
+            Add-Type -AssemblyName System.Windows.Forms
+            [System.Windows.Forms.MessageBox]::Show("Yönetici izni verilmediği için başlatıcı açılmadı.`n`nGoodbyeDPI'ın ağ sürücüsü yönetici izni olmadan çalışamıyor.", 'Discord Başlatıcı', 'OK', 'Warning') | Out-Null
+        }
+    }
     exit
 }
 
@@ -413,6 +424,28 @@ function DiscordIndirKur {
     return [bool](DiscordBul)
 }
 
+# Discord'u yönetici olarak DEĞİL, normal kullanıcı yetkisiyle aç.
+# Başlatıcı yönetici olarak çalıştığı için doğrudan açılan Discord da yönetici olur; o zaman
+# Gezgin'den Discord'a dosya sürükle-bırak çalışmaz ve bildirimden açılan kopyalar karışır.
+# Bunun için geçici bir kısayol oluşturulup Windows Gezgini (explorer) üzerinden açılır.
+function DiscorduNormalYetkiyleAc($exe, $argumanlar) {
+    New-Item -ItemType Directory -Path $script:sabitKlasor -Force | Out-Null
+    $lnk = Join-Path $script:sabitKlasor 'discord_baslat.lnk'
+    $kabuk = New-Object -ComObject WScript.Shell
+    $kisayol = $kabuk.CreateShortcut($lnk)
+    $kisayol.TargetPath       = $exe
+    $kisayol.Arguments        = $argumanlar
+    $kisayol.WorkingDirectory = Split-Path $exe -Parent
+    $kisayol.Save()
+    if (Get-Process explorer) {
+        Start-Process explorer.exe "`"$lnk`""
+    }
+    else {
+        # Gezgin çalışmıyorsa (çok nadir) mecburen doğrudan aç
+        Start-Process $exe -ArgumentList $argumanlar
+    }
+}
+
 # Discord'u (yeniden) başlat: GoodbyeDPI'ı aç, Discord'u ByeDPI ile aç, güncelleme beklemeye geç
 function DiscordBaslat([switch]$Kucuk) {
     Get-Process Discord | Stop-Process -Force
@@ -442,7 +475,7 @@ function DiscordBaslat([switch]$Kucuk) {
     if ($Kucuk) { $discordArg += ' --start-minimized' }
 
     Remove-Item $script:log, $script:logHat -Force
-    Start-Process $exe -ArgumentList $discordArg -RedirectStandardOutput $script:log -RedirectStandardError $script:logHat
+    DiscorduNormalYetkiyleAc $exe $discordArg
 
     $script:asama       = 'bekle'
     $script:sayac       = 0
@@ -509,6 +542,34 @@ function InterneteKadarBekle {
 
 # --- DNS ---
 
+# Discord'un gerçek adresleri: Cloudflare'in şifreli DNS'ine (DoH) doğrudan sorulur, 10 dakika saklanır.
+# Böylece Discord ileride adres değiştirirse de "sahte cevap" kontrolü yanılmaz.
+$script:gercekAdresler     = @()
+$script:gercekAdresZamani  = [datetime]::MinValue
+
+function GercekDiscordAdresleri {
+    if ($script:gercekAdresler.Count -gt 0 -and ((Get-Date) - $script:gercekAdresZamani).TotalMinutes -lt 10) {
+        return $script:gercekAdresler
+    }
+    $json = & curl.exe -s --max-time 5 -H 'accept: application/dns-json' 'https://1.1.1.1/dns-query?name=discord.com&type=A'
+    if ($json) {
+        $veri = ($json -join "`n") | ConvertFrom-Json
+        $liste = @($veri.Answer | Where-Object { $_.type -eq 1 } | ForEach-Object { $_.data })
+        if ($liste.Count -gt 0) {
+            $script:gercekAdresler    = $liste
+            $script:gercekAdresZamani = Get-Date
+        }
+    }
+    return $script:gercekAdresler
+}
+
+# Verilen adres Discord'un gerçek adresi mi? (Cloudflare 162.159.* ya da DoH'un verdiği adreslerden biri)
+function AdresDiscordunMu($ip) {
+    if (-not $ip) { return $false }
+    if ($ip -like '162.159.*') { return $true }
+    return (@(GercekDiscordAdresleri) -contains $ip)
+}
+
 # discord.com şu an hangi adrese çözülüyor?
 function DiscordAdresi {
     $kayit = Resolve-DnsName -Name 'discord.com' -Type A -QuickTimeout |
@@ -520,19 +581,20 @@ function DiscordAdresi {
 # DNS sahte cevap veriyorsa düzeltmeyi dene. Düzeldiyse $true döner.
 function DnsZehirlenmesiniDuzelt {
     $adres = DiscordAdresi
-    if ($adres -like '162.159.*') { return $true }
+    if (AdresDiscordunMu $adres) { return $true }
 
     Kaydet "DNS yanlış cevap veriyor: discord.com -> $adres (sağlayıcının engel adresi olabilir)"
     Clear-DnsClientCache
     Start-Sleep -Seconds 1
     $adres = DiscordAdresi
-    if ($adres -like '162.159.*') {
+    if (AdresDiscordunMu $adres) {
         Kaydet 'DNS önbelleği temizlenince düzeldi'
         return $true
     }
 
-    # DNS'i daha önce başlatıcı ayarladıysa (ya da şifreli DNS kuruluysa) ayarı sessizce yeniden uygula
-    if ((Test-Path $script:dnsYedekDosyasi) -or (Get-DnsClientDohServerAddress -ServerAddress '1.1.1.1')) {
+    # DNS'i daha önce başlatıcı (kullanıcının izniyle) ayarladıysa ayarı sessizce yeniden uygula.
+    # İzin verilmemişse kullanıcının DNS ayarına dokunma.
+    if (Test-Path $script:dnsYedekDosyasi) {
         if (DnsAyarla) {
             Kaydet 'Şifreli DNS ayarı yeniden uygulandı, düzeldi'
             return $true
@@ -547,7 +609,7 @@ function DnsDogruMu {
     Clear-DnsClientCache
     $kayit = Resolve-DnsName -Name 'discord.com' -Type A -DnsOnly -QuickTimeout |
              Where-Object { $_.IPAddress } | Select-Object -First 1
-    return ($kayit -and $kayit.IPAddress -like '162.159.*')
+    return ($kayit -and (AdresDiscordunMu $kayit.IPAddress))
 }
 
 # İnternete bağlı (varsayılan ağ geçidi olan, açık) ağ bağdaştırıcıları
@@ -561,13 +623,16 @@ function DnsYedekle {
     $yedek = @()
     foreach ($ag in AktifAglar) {
         $guid = $ag.NetAdapter.InterfaceGuid
-        $statik = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$guid").NameServer
+        $statik4 = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces\$guid").NameServer
+        $statik6 = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\Interfaces\$guid").NameServer
         $yedek += [PSCustomObject]@{
-            Index     = $ag.InterfaceIndex
-            Ad        = $ag.InterfaceAlias
-            Guid      = $guid
-            Dhcp      = [string]::IsNullOrWhiteSpace($statik)
-            Sunucular = @((Get-DnsClientServerAddress -InterfaceIndex $ag.InterfaceIndex -AddressFamily IPv4).ServerAddresses)
+            Index      = $ag.InterfaceIndex
+            Ad         = $ag.InterfaceAlias
+            Guid       = $guid
+            Dhcp       = [string]::IsNullOrWhiteSpace($statik4)
+            Dhcp6      = [string]::IsNullOrWhiteSpace($statik6)
+            Sunucular  = @((Get-DnsClientServerAddress -InterfaceIndex $ag.InterfaceIndex -AddressFamily IPv4).ServerAddresses)
+            Sunucular6 = @((Get-DnsClientServerAddress -InterfaceIndex $ag.InterfaceIndex -AddressFamily IPv6).ServerAddresses)
         }
     }
     New-Item -ItemType Directory -Path $script:sabitKlasor -Force | Out-Null
@@ -578,10 +643,12 @@ function DnsYedekle {
 function DnsAyarla {
     DnsYedekle
     $win11 = [Environment]::OSVersion.Version.Build -ge 22000
-    $sunucular = @('1.1.1.1', '1.0.0.1')
+    $sunucular  = @('1.1.1.1', '1.0.0.1')
+    # IPv6: sağlayıcının IPv6 DNS'i de sahte cevap verebiliyor, onu da Cloudflare'e çevir
+    $sunucular6 = @('2606:4700:4700::1111', '2606:4700:4700::1001')
 
     if ($win11) {
-        foreach ($s in $sunucular) {
+        foreach ($s in ($sunucular + $sunucular6)) {
             if (Get-DnsClientDohServerAddress -ServerAddress $s) {
                 Set-DnsClientDohServerAddress -ServerAddress $s -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $false -AutoUpgrade $true | Out-Null
             }
@@ -594,13 +661,24 @@ function DnsAyarla {
     }
 
     foreach ($ag in AktifAglar) {
-        Set-DnsClientServerAddress -InterfaceIndex $ag.InterfaceIndex -ServerAddresses $sunucular
+        # Bağlantıda IPv6 DNS kullanılıyorsa onu da değiştir
+        $ipv6Var = @((Get-DnsClientServerAddress -InterfaceIndex $ag.InterfaceIndex -AddressFamily IPv6).ServerAddresses).Count -gt 0
+        $liste = $sunucular
+        if ($ipv6Var) { $liste = $sunucular + $sunucular6 }
+        Set-DnsClientServerAddress -InterfaceIndex $ag.InterfaceIndex -ServerAddresses $liste
         if ($win11) {
             $guid = $ag.NetAdapter.InterfaceGuid
             foreach ($s in $sunucular) {
                 $anahtar = "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\InterfaceSpecificParameters\$guid\DohInterfaceSettings\Doh\$s"
                 New-Item -Path $anahtar -Force | Out-Null
                 New-ItemProperty -Path $anahtar -Name 'DohFlags' -Value 1 -PropertyType QWord -Force | Out-Null
+            }
+            if ($ipv6Var) {
+                foreach ($s in $sunucular6) {
+                    $anahtar = "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\InterfaceSpecificParameters\$guid\DohInterfaceSettings\Doh6\$s"
+                    New-Item -Path $anahtar -Force | Out-Null
+                    New-ItemProperty -Path $anahtar -Name 'DohFlags' -Value 1 -PropertyType QWord -Force | Out-Null
+                }
             }
         }
     }
@@ -615,11 +693,14 @@ function DnsGeriAl {
     if (-not (Test-Path $script:dnsYedekDosyasi)) { return $false }
     $yedek = @(Get-Content $script:dnsYedekDosyasi -Raw | ConvertFrom-Json)
     foreach ($y in $yedek) {
-        if ($y.Dhcp) {
-            Set-DnsClientServerAddress -InterfaceIndex $y.Index -ResetServerAddresses
-        }
-        else {
-            Set-DnsClientServerAddress -InterfaceIndex $y.Index -ServerAddresses @($y.Sunucular)
+        # Önce otomatiğe (DHCP) döndür, sonra elle girilmiş eski adresler varsa onları geri yaz
+        Set-DnsClientServerAddress -InterfaceIndex $y.Index -ResetServerAddresses
+        $eski = @()
+        if (-not $y.Dhcp) { $eski += @($y.Sunucular) }
+        if ($y.PSObject.Properties['Dhcp6'] -and -not $y.Dhcp6) { $eski += @($y.Sunucular6) }
+        $eski = @($eski | Where-Object { $_ })
+        if ($eski.Count -gt 0) {
+            Set-DnsClientServerAddress -InterfaceIndex $y.Index -ServerAddresses $eski
         }
         if ($y.Guid) {
             Remove-Item "HKLM:\SYSTEM\CurrentControlSet\Services\Dnscache\InterfaceSpecificParameters\$($y.Guid)\DohInterfaceSettings" -Recurse -Force
@@ -933,11 +1014,9 @@ $menu.Items.Add($script:ayarOgesi) | Out-Null
 
 $menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
 
-# Menü açılınca bağlantıyı ölç (Discord hazırsa)
-$menu.add_Opening({
-    if ($script:asama -eq 'izle') { ByeDpiTest | Out-Null }
-    BaglantiBilgisiGuncelle
-})
+# Menü açılınca son ölçülen bağlantı bilgisini göster (ölçüm her dakika arka planda yapılıyor;
+# menü açılırken ölçmek, bağlantı yoksa menünün 6 saniye donmasına yol açıyordu)
+$menu.add_Opening({ BaglantiBilgisiGuncelle })
 
 $yenidenOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Discord'u yeniden başlat")
 $yenidenOgesi.add_Click({ Kaydet "Discord yeniden başlatılıyor (kullanıcı isteği)"; DiscordBaslat })
@@ -1065,7 +1144,7 @@ $script:tepsi.add_MouseClick({
     if ($olay.Button -ne [System.Windows.Forms.MouseButtons]::Left) { return }
     $exe = DiscordBul
     if ($exe -and (Get-Process Discord)) {
-        Start-Process $exe -ArgumentList '--proxy-server=socks5://127.0.0.1:1080'
+        DiscorduNormalYetkiyleAc $exe '--proxy-server=socks5://127.0.0.1:1080'
     }
 })
 $script:tepsi.Visible = $true
@@ -1138,7 +1217,24 @@ $script:tik = 0
 
 $zamanlayici = New-Object System.Windows.Forms.Timer
 $zamanlayici.Interval = 1000
+$script:tikCalisiyor   = $false
+$script:byedpiCokmeler = @()
+$script:byedpiDurdu    = $false
+
 $zamanlayici.add_Tick({
+    # Bir önceki tur henüz bitmediyse (soru penceresi açık, ayar aranıyor vb.) bu turu atla.
+    # Yoksa iç içe çalışan turlar aynı soruyu tekrar tekrar sorabiliyor ya da birbirini bozuyordu.
+    if ($script:tikCalisiyor) { return }
+    $script:tikCalisiyor = $true
+    try {
+        ZamanlayiciTuru
+    }
+    finally {
+        $script:tikCalisiyor = $false
+    }
+})
+
+function ZamanlayiciTuru {
     $script:tik++
     $script:sayac++
 
@@ -1151,11 +1247,26 @@ $zamanlayici.add_Tick({
     # 3 saniyede bir: ByeDPI ve proxy'siz Discord kontrolü
     if ($script:tik % 3 -eq 0) {
 
-        # ByeDPI çöktüyse yeniden aç
-        if (-not (Get-Process ciadpi)) {
-            Kaydet 'ByeDPI kapanmış bulundu, yeniden başlatılıyor'
-            ByeDpiAc
-            Bildirim 'ByeDPI yeniden başlatıldı' 'ByeDPI kapanmıştı, tekrar açıldı.' 'Warning'
+        # ByeDPI çöktüyse yeniden aç. 1 dakikada 3 kereden fazla çöküyorsa (ör. 1080 portunu
+        # başka bir program kullanıyorsa) sürekli denemek yerine dur ve bir kere haber ver.
+        if (-not $script:byedpiDurdu -and -not (Get-Process ciadpi)) {
+            $simdi = Get-Date
+            $script:byedpiCokmeler = @($script:byedpiCokmeler | Where-Object { ($simdi - $_).TotalSeconds -lt 60 }) + $simdi
+            if ($script:byedpiCokmeler.Count -gt 3) {
+                $script:byedpiDurdu = $true
+                $portSahibi = Get-NetTCPConnection -LocalPort 1080 -State Listen | Select-Object -First 1
+                $sahipAdi = if ($portSahibi) { (Get-Process -Id $portSahibi.OwningProcess).ProcessName } else { $null }
+                $neden = if ($sahipAdi) { "1080 portunu '$sahipAdi' kullanıyor olabilir." } else { 'Neden bilinmiyor.' }
+                Kaydet "ByeDPI sürekli kapanıyor, yeniden başlatma durduruldu. $neden"
+                Renk 'kirmizi'
+                Durum 'ByeDPI çalışmıyor'
+                Bildirim 'ByeDPI çalışmıyor' "ByeDPI açılır açılmaz kapanıyor. $neden Tepsiden 'Programı yeniden başlat'ı dene." 'Error'
+            }
+            else {
+                Kaydet 'ByeDPI kapanmış bulundu, yeniden başlatılıyor'
+                ByeDpiAc
+                Bildirim 'ByeDPI yeniden başlatıldı' 'ByeDPI kapanmıştı, tekrar açıldı.' 'Warning'
+            }
         }
 
         # Discord kendini proxy'siz açtıysa düzelt (başlatmadan sonraki ilk 15 saniye hariç).
@@ -1218,10 +1329,12 @@ $zamanlayici.add_Tick({
         }
     }
     elseif ($script:asama -eq 'izle') {
-        # 3 saniyede bir bak; Discord iki kontrol üst üste yoksa her şeyi kapat
+        # 3 saniyede bir bak; Discord yaklaşık 15 saniye boyunca yoksa her şeyi kapat.
+        # (Discord kendini güncellerken bir süre kapanıp yeniden açılıyor; o arada kapanmamak için
+        # güncelleyici çalışırken de bekleniyor.)
         if ($script:sayac % 3 -eq 0) {
-            if (Get-Process Discord) { $script:yok = 0 } else { $script:yok++ }
-            if ($script:yok -ge 2) { Bitir; return }
+            if ((Get-Process Discord) -or (Get-Process Update | Where-Object { $_.Path -like "*\Discord\*" })) { $script:yok = 0 } else { $script:yok++ }
+            if ($script:yok -ge 5) { Bitir; return }
         }
 
         # 30 saniyede bir arka planda başka GoodbyeDPI açılmış mı bak
@@ -1244,7 +1357,7 @@ $zamanlayici.add_Tick({
 
                     # 1) Önce DNS: sağlayıcının sahte cevabı en sık neden
                     $dnsDuzeldi = $false
-                    if ((DiscordAdresi) -notlike '162.159.*') {
+                    if (-not (AdresDiscordunMu (DiscordAdresi))) {
                         if (DnsZehirlenmesiniDuzelt) {
                             ByeDpiYenidenBaslat $script:byedpiAyar
                             Start-Sleep -Seconds 1
@@ -1277,7 +1390,7 @@ $zamanlayici.add_Tick({
                     }
                 }
             }
-            elseif ((DiscordAdresi) -notlike '162.159.*') {
+            elseif (-not (AdresDiscordunMu (DiscordAdresi))) {
                 # Bağlantı şimdilik çalışıyor ama DNS bozulmuş: önbellek bitince kopacak, şimdiden düzelt
                 DnsZehirlenmesiniDuzelt | Out-Null
             }
@@ -1290,7 +1403,7 @@ $zamanlayici.add_Tick({
             }
         }
     }
-})
+}
 
 $zamanlayici.Start()
 $script:donguCalisiyor = $true
