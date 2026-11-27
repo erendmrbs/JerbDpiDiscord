@@ -97,7 +97,8 @@ The end of the update check is detected by any of these:
 - 🖥️ **Runs in the system tray.** No black console window.
 - 🟢 **Colored status icon.** Shows the state at a glance.
 - 📥 **Installs Discord for you** if it isn't installed.
-- 🔧 **Finds a working ByeDPI setting automatically.** If the connection drops, it tries 5 settings and saves the one that works.
+- 🔧 **Heals dropped connections.** Tests the connection every minute. If it drops, it first restarts ByeDPI; if that isn't enough, it tries 5 settings and saves the one that works.
+- 📝 **Event log.** Writes drops, automatic fixes and errors to `baslatici.log`.
 - 🛡️ **Restarts ByeDPI** if it crashes.
 - 🔁 **Fixes Discord started without the proxy** (for example after a big update) by restarting it with the right setting.
 - 🚀 **Start with Windows.** No admin prompt, Discord starts minimized to the tray.
@@ -237,7 +238,9 @@ I also recommend turning on **"Minimize to tray"** in the same place.
 | **Bağlantı süresi** | Connection time | How many ms it takes to reach Discord through ByeDPI. Measured each time the menu opens. |
 | **ByeDPI ayarı** | ByeDPI setting | The ByeDPI parameters in use |
 | **Discord'u yeniden başlat** | Restart Discord | Closes Discord, passes it through the update check and starts it again |
+| **Programı yeniden başlat** | Restart program | Closes the whole launcher (Discord, ByeDPI, GoodbyeDPI included) and starts it fresh |
 | **ByeDPI ayarını otomatik bul** | Find ByeDPI setting | Tests the connection; if it fails, tries other settings and saves the one that works |
+| **Kayıtları aç** | Open log | Opens the event log (`baslatici.log`) in Notepad |
 | **Sürücü hatasını onar** | Repair driver | Clears the WinDivert driver registration and offers a restart |
 | **DNS → DNS ayarını kontrol et / yap** | Check / set up DNS | Checks whether DNS resolves Discord correctly; switches to encrypted DNS if needed |
 | **DNS → Eski haline döndür** | Restore previous | Restores your DNS settings from before the launcher changed them |
@@ -284,6 +287,7 @@ When autostart is turned on, a small **finder** script is placed in `%LocalAppDa
 |---|---|---|
 | `byedpi_ayar.txt` | `byedpi\` | The working ByeDPI setting found automatically |
 | `sessiz_mod.txt` | `byedpi\` | If present, quiet mode is on |
+| `baslatici.log` | `byedpi\` | Event log: connection drops, automatic fixes and errors. Open it with **"Kayıtları aç"** (Open log) in the menu. |
 | `dns_sorma.txt` | `byedpi\` | If present, the DNS question isn't asked at startup |
 | `dns_yedek.json` | `%LocalAppData%\DiscordBaslatici\` | Your DNS settings before the launcher changed them |
 | `bulucu.ps1` | `%LocalAppData%\DiscordBaslatici\` | The finder script used at startup |
