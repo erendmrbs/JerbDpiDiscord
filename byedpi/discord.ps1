@@ -118,13 +118,35 @@ $script:sonBaslatma = Get-Date
 # Denenecek ByeDPI ayarları (ilk çalışan kaydedilir)
 $script:byedpiBaglantiSiniri = 4096
 
+# Farklı internet sağlayıcıları farklı yöntemlerle engelliyor; çalışan bulunana kadar sırayla denenir
 $script:onAyarlar = @(
     '--disorder 1 --tlsrec 1+s',
     '--split 1+s --disorder 3+s',
     '--tlsrec 3+s --split 2',
     '--disorder 1 --split 2 --tlsrec 1+s',
-    '--fake -1 --ttl 8'
+    '--fake -1 --ttl 8',
+    '--fake -1 --ttl 5 --disorder 1',
+    '--fake -1 --ttl 3 --tlsrec 1+s',
+    '--oob 1 --tlsrec 1+s',
+    '--disoob 1 --split 1+s',
+    '--disorder 1 --fake -1 --ttl 6 --tlsrec 3+s',
+    '--split 1+s --oob 2+s --tlsrec 1+s',
+    '--disorder 1 --tlsrec 1+s --auto torst,ssl_err --fake -1 --ttl 5 --auto torst,ssl_err --split 1+s --oob 2+s'
 )
+
+# GoodbyeDPI ayarları (sadece açılıştaki Discord güncelleme kontrolü için kullanılır).
+# GoodbyeDPI-Turkey paketindeki ayarlar: ana ayar ve Superonline için 6 alternatif.
+$script:gdpiAyarlari = @(
+    '-5 --set-ttl 5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253',
+    '--set-ttl 3',
+    '-5',
+    '--set-ttl 3 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253',
+    '-5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253',
+    '-9 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253',
+    '-9'
+)
+# Bir GoodbyeDPI ayarına kaç saniye şans verilsin (güncelleme bu sürede bitmezse sıradakine geçilir)
+$script:gdpiDenemeSuresi = 20
 
 # ---------------------------------------------------------------------------
 # Yardımcı fonksiyonlar
@@ -237,8 +259,27 @@ function ByeDpiBaglantiSayisi {
 }
 
 # ByeDPI üzerinden Discord'a ulaşılabiliyor mu?
+# curl çıkış kodunu anlaşılır yazıya çevir
+function CurlHataMetni($kod) {
+    switch ($kod) {
+        0       { 'beklenmeyen cevap' }
+        5       { 'proxy adı çözülemedi' }
+        6       { 'adres çözülemedi (DNS)' }
+        7       { "ByeDPI'a bağlanılamadı" }
+        28      { 'zaman aşımı' }
+        35      { 'TLS el sıkışması başarısız (engel)' }
+        52      { 'boş cevap' }
+        56      { 'bağlantı kesildi / sıfırlandı (engel)' }
+        97      { 'proxy (SOCKS) hatası' }
+        $null   { 'curl bulunamadı' }
+        default { "curl hata kodu $kod" }
+    }
+}
+
 function ByeDpiTest {
-    $cikti = & curl.exe -s -o NUL -w '%{http_code} %{time_total}' --max-time 6 -x socks5h://127.0.0.1:1080 'https://discord.com/api/v9/gateway'
+    $global:LASTEXITCODE = $null
+    $cikti = & curl.exe -s -o NUL -w '%{http_code} %{time_total}' --max-time 5 -x socks5h://127.0.0.1:1080 'https://discord.com/api/v9/gateway'
+    $script:sonTestHatasi = CurlHataMetni $LASTEXITCODE
     $parca = "$cikti".Trim() -split ' '
     if ($parca[0] -eq '200') {
         $sure = 0.0
@@ -270,7 +311,9 @@ function ByeDpiAyarBul {
         Durum "ByeDPI ayarı aranıyor ($i/$($sira.Count))"
         [System.Windows.Forms.Application]::DoEvents()
         ByeDpiYenidenBaslat $ayar
-        if (ByeDpiTest) {
+        $tamam = ByeDpiTest
+        if (-not $tamam) { Kaydet "  ByeDPI ayarı çalışmadı: $ayar ($script:sonTestHatasi)" }
+        if ($tamam) {
             Set-Content -Path $script:ayarDosyasi -Value $ayar -Encoding ASCII
             Renk 'yesil'
             Durum 'Discord ByeDPI ile çalışıyor'
@@ -292,9 +335,35 @@ function ByeDpiAyarBul {
 
 # --- GoodbyeDPI ---
 
+# GoodbyeDPI ayarlarının deneme sırası: önce en son çalışan (kayıtlı) ayar, sonra diğerleri
+function GdpiSirasiniHazirla {
+    $kayitli = $script:gdpiAyarlari[0]
+    if (Test-Path $script:gdpiAyarDosyasi) {
+        $okunan = (Get-Content $script:gdpiAyarDosyasi -TotalCount 1)
+        if ($okunan -and $script:gdpiAyarlari -contains $okunan.Trim()) { $kayitli = $okunan.Trim() }
+    }
+    $script:gdpiSira    = @($kayitli) + @($script:gdpiAyarlari | Where-Object { $_ -ne $kayitli })
+    $script:gdpiSiraNo  = 0
+    $script:gdpiAyar    = $script:gdpiSira[0]
+}
+
+# Güncelleme kontrolü geçmiyorsa sıradaki GoodbyeDPI ayarına geç. Başka ayar kalmadıysa $false döner.
+function GdpiSonrakiAyar {
+    if ($script:gdpiSiraNo + 1 -ge $script:gdpiSira.Count) { return $false }
+    $script:gdpiSiraNo++
+    $script:gdpiAyar = $script:gdpiSira[$script:gdpiSiraNo]
+    # Sürücüyü kapatmadan sadece işlemi değiştir (sürücüyü sık açıp kapatmak 1058 hatasına yol açabiliyor)
+    BizimGoodbyeDpi | Stop-Process -Force
+    Start-Sleep -Milliseconds 800
+    Kaydet "GoodbyeDPI ayarı değiştiriliyor ($($script:gdpiSiraNo + 1)/$($script:gdpiSira.Count)): $script:gdpiAyar"
+    GoodbyeDpiAc | Out-Null
+    return $true
+}
+
 function GoodbyeDpiAc {
+    if (-not $script:gdpiAyar) { GdpiSirasiniHazirla }
     if ((BizimGoodbyeDpi).Count -eq 0) {
-        Start-Process $script:gdpiExe -WorkingDirectory $script:gdpiKlasor -WindowStyle Hidden -ArgumentList "-5 --set-ttl 5 --dns-addr 77.88.8.8 --dns-port 1253 --dnsv6-addr 2a02:6b8::feed:0ff --dnsv6-port 1253 --blacklist `"$script:blacklist`""
+        Start-Process $script:gdpiExe -WorkingDirectory $script:gdpiKlasor -WindowStyle Hidden -ArgumentList "$script:gdpiAyar --blacklist `"$script:blacklist`""
         Start-Sleep -Seconds 3
     }
     return ((BizimGoodbyeDpi).Count -gt 0)
@@ -465,6 +534,7 @@ function DiscordBaslat([switch]$Kucuk) {
 
     Renk 'sari'
     ByeDpiAc
+    if ((BizimGoodbyeDpi).Count -eq 0) { GdpiSirasiniHazirla }
     Durum 'GoodbyeDPI açılıyor'
     if (-not (GoodbyeDpiAc)) {
         Renk 'kirmizi'
@@ -907,6 +977,7 @@ if (Test-Path (Join-Path $gdpiAna 'x86_64\goodbyedpi.exe')) { $script:gdpiKlasor
 $script:gdpiExe      = Join-Path $script:gdpiKlasor 'goodbyedpi.exe'
 $script:blacklist    = Join-Path $gdpiAna 'discord.txt'
 $script:ayarDosyasi  = Join-Path $klasor 'byedpi_ayar.txt'
+$script:gdpiAyarDosyasi = Join-Path $klasor 'goodbyedpi_ayar.txt'
 $script:sessizDosya  = Join-Path $klasor 'sessiz_mod.txt'
 $script:dnsSormaDosyasi = Join-Path $klasor 'dns_sorma.txt'
 $script:disGdpiOtomatikDosya = Join-Path $klasor 'dis_goodbyedpi_kapat.txt'
@@ -1318,10 +1389,23 @@ $script:zamanlayiciTuru = {
         $hazir = $pencere -or (DiscordProxyBaglantisiVarMi)
 
         if ($hazir) {
+            # Bu GoodbyeDPI ayarı işe yaradı; varsayılandan farklıysa bir dahaki sefere önce bu denensin
+            $oncekiKayitli = if (Test-Path $script:gdpiAyarDosyasi) { (Get-Content $script:gdpiAyarDosyasi -TotalCount 1) } else { $script:gdpiAyarlari[0] }
+            if ($script:gdpiAyar -and "$oncekiKayitli".Trim() -ne $script:gdpiAyar) {
+                Set-Content -Path $script:gdpiAyarDosyasi -Value $script:gdpiAyar -Encoding ASCII
+                Kaydet "Çalışan GoodbyeDPI ayarı kaydedildi: $script:gdpiAyar"
+            }
             $script:asama = 'tampon'
             $script:sayac = 0
         }
-        elseif ($script:sayac -ge 120) {
+        elseif ($script:sayac -lt $script:gdpiDenemeSuresi * $script:gdpiSira.Count -and
+                $script:sayac -ge $script:gdpiDenemeSuresi * ($script:gdpiSiraNo + 1)) {
+            # Bu ayarla güncelleme kontrolü geçmedi, sıradakini dene
+            if (GdpiSonrakiAyar) {
+                Durum "GoodbyeDPI ayarı deneniyor ($($script:gdpiSiraNo + 1)/$($script:gdpiSira.Count))"
+            }
+        }
+        elseif ($script:sayac -ge $script:gdpiDenemeSuresi * $script:gdpiSira.Count + 10) {
             GoodbyeDpiKapat
             $script:asama = 'izle'
             $script:sayac = 0
@@ -1373,7 +1457,30 @@ $script:zamanlayiciTuru = {
             if (-not (ByeDpiTest)) {
                 Start-Sleep -Seconds 2
                 if (-not (ByeDpiTest)) {
-                    Kaydet "Bağlantı testi başarısız (ByeDPI'a açık bağlantı: $baglanti, ayar: $script:byedpiAyar, discord.com -> $(DiscordAdresi))"
+                    Kaydet "Bağlantı testi başarısız: $script:sonTestHatasi (ByeDPI'a açık bağlantı: $baglanti, ayar: $script:byedpiAyar, discord.com -> $(DiscordAdresi))"
+
+                    # 0) Arka planda başka bir GoodbyeDPI çalışıyorsa ByeDPI'ın paketlerini de bozuyor olabilir.
+                    #    Bu durumda ayar aramak boşuna; önce onu kapatmayı öner.
+                    $disGdpi = DisGoodbyeDpiBul
+                    if ($disGdpi.Count -gt 0) {
+                        Kaydet "Arka planda başka GoodbyeDPI çalışıyor, ByeDPI ile çakışıyor olabilir: $(($disGdpi | ForEach-Object { $_.Ad }) -join ', ')"
+                        DisGoodbyeDpiKontrol -Elle
+                        if ((DisGoodbyeDpiBul).Count -eq 0) {
+                            Start-Sleep -Seconds 1
+                            if (ByeDpiTest) {
+                                Kaydet "Arka plandaki GoodbyeDPI kapatılınca bağlantı düzeldi ($($script:sonGecikme) ms)"
+                                Renk 'yesil'
+                                Durum 'Discord ByeDPI ile çalışıyor'
+                                return
+                            }
+                        }
+                        else {
+                            Renk 'kirmizi'
+                            Durum 'başka GoodbyeDPI çakışıyor'
+                            Bildirim 'Bağlantı kurulamıyor' "Arka planda çalışan başka bir GoodbyeDPI, ByeDPI ile çakışıyor. Tepsiden 'Arka plandaki GoodbyeDPI'ı kapat'ı seç." 'Error'
+                            return
+                        }
+                    }
 
                     # 1) Önce DNS: sağlayıcının sahte cevabı en sık neden
                     $dnsDuzeldi = $false

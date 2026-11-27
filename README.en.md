@@ -97,7 +97,8 @@ The end of the update check is detected by any of these:
 - 🖥️ **Runs in the system tray.** No black console window.
 - 🟢 **Colored status icon.** Shows the state at a glance.
 - 📥 **Installs Discord for you** if it isn't installed.
-- 🔧 **Heals dropped connections.** Tests the connection every minute. If it drops, it first restarts ByeDPI; if that isn't enough, it tries 5 settings and saves the one that works.
+- 🔧 **Heals dropped connections.** Tests the connection every minute. If it drops, it first checks DNS and other GoodbyeDPI instances, then restarts ByeDPI; if that isn't enough, it tries 12 ByeDPI settings and saves the one that works.
+- 🌍 **Adapts to different ISPs.** If the startup update check doesn't get through, it tries the settings from the GoodbyeDPI-Turkey package (main setting + 6 Superonline alternatives) one by one and remembers the one that works.
 - 📝 **Event log.** Writes drops, automatic fixes and errors to `baslatici.log`.
 - 🛡️ **Restarts ByeDPI** if it crashes.
 - 🔁 **Fixes Discord started without the proxy** (for example after a big update) by restarting it with the right setting.
@@ -298,6 +299,7 @@ When autostart is turned on, a small **finder** script is placed in `%LocalAppDa
 | File | Location | Purpose |
 |---|---|---|
 | `byedpi_ayar.txt` | `byedpi\` | The working ByeDPI setting found automatically |
+| `goodbyedpi_ayar.txt` | `byedpi\` | The GoodbyeDPI setting that worked for the update check (if different from the default) |
 | `sessiz_mod.txt` | `byedpi\` | If present, quiet mode is on |
 | `baslatici.log` | `byedpi\` | Event log: connection drops, automatic fixes and errors. Open it with **"Kayıtları aç"** (Open log) in the menu. |
 | `dns_sorma.txt` | `byedpi\` | If present, the DNS question isn't asked at startup |
@@ -308,7 +310,7 @@ When autostart is turned on, a small **finder** script is placed in `%LocalAppDa
 | `discord_baslat.log` | `%TEMP%\` | Discord's log from the last start (for troubleshooting) |
 | `DiscordSetup.exe` | `%TEMP%\` | The Discord installer, downloaded if Discord isn't installed |
 
-To reset the settings, just delete `byedpi_ayar.txt`.
+To reset the settings, just delete `byedpi_ayar.txt` and `goodbyedpi_ayar.txt`.
 
 ---
 

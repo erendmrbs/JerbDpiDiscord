@@ -95,7 +95,8 @@ Güncelleme kontrolünün bittiği şu yollardan biriyle anlaşılıyor:
 - 🖥️ **Sistem tepsisinde çalışıyor.** Siyah komut penceresi yok.
 - 🟢 **Renkli durum simgesi.** Durumu bir bakışta gösteriyor.
 - 📥 **Discord kurulu değilse** kendisi indirip kuruyor.
-- 🔧 **Bağlantı koparsa kendini düzeltiyor.** Her dakika bağlantıyı test ediyor. Koparsa önce ByeDPI'ı yeniden başlatıyor, yetmezse 5 farklı ayarı deneyip çalışanı kaydediyor.
+- 🔧 **Bağlantı koparsa kendini düzeltiyor.** Her dakika bağlantıyı test ediyor. Koparsa önce DNS'e ve arka plandaki başka GoodbyeDPI'lara bakıyor, sonra ByeDPI'ı yeniden başlatıyor, yetmezse 12 farklı ByeDPI ayarını deneyip çalışanı kaydediyor.
+- 🌍 **Farklı internet sağlayıcılarına uyum.** Açılıştaki güncelleme kontrolü geçmezse GoodbyeDPI-Turkey paketindeki ayarları (ana ayar + 6 Superonline alternatifi) sırayla deniyor ve çalışanı hatırlıyor.
 - 📝 **Olay kayıtları.** Kopmaları, otomatik düzeltmeleri ve hataları `baslatici.log` dosyasına yazıyor.
 - 🛡️ **ByeDPI çökerse** kendiliğinden yeniden başlatıyor.
 - 🔁 **Discord proxy'siz açılırsa** (örneğin büyük bir güncellemeden sonra) bunu fark edip doğru ayarla yeniden açıyor.
@@ -296,6 +297,7 @@ Otomatik başlatma açıldığında `%LocalAppData%\DiscordBaslatici\` klasörü
 | Dosya | Yer | Ne işe yarar |
 |---|---|---|
 | `byedpi_ayar.txt` | `byedpi\` | Otomatik bulunan, çalışan ByeDPI ayarı |
+| `goodbyedpi_ayar.txt` | `byedpi\` | Güncelleme kontrolünde çalışan GoodbyeDPI ayarı (varsayılandan farklıysa) |
 | `sessiz_mod.txt` | `byedpi\` | Varsa sessiz mod açık |
 | `baslatici.log` | `byedpi\` | Olay kayıtları: bağlantı kopmaları, otomatik düzeltmeler ve hatalar. Menüden **"Kayıtları aç"** ile açılır. |
 | `dns_sorma.txt` | `byedpi\` | Varsa açılışta DNS ayarı sorulmaz |
@@ -306,7 +308,7 @@ Otomatik başlatma açıldığında `%LocalAppData%\DiscordBaslatici\` klasörü
 | `discord_baslat.log` | `%TEMP%\` | Son açılıştaki Discord kayıtları (sorun giderme için) |
 | `DiscordSetup.exe` | `%TEMP%\` | Discord kurulu değilse indirilen kurulum dosyası |
 
-Ayarları sıfırlamak istersen `byedpi_ayar.txt` dosyasını silmen yeterli.
+Ayarları sıfırlamak istersen `byedpi_ayar.txt` ve `goodbyedpi_ayar.txt` dosyalarını silmen yeterli.
 
 ---
 
