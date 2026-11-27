@@ -103,6 +103,7 @@ The end of the update check is detected by any of these:
 - 🔁 **Fixes Discord started without the proxy** (for example after a big update) by restarting it with the right setting.
 - 🚀 **Start with Windows.** No admin prompt, Discord starts minimized to the tray.
 - 📁 **Keeps working at startup even if you rename or move the folder.**
+- 🚫 **Catches other GoodbyeDPI instances.** If another GoodbyeDPI is installed as a service by some other package, or runs from another folder (it conflicts with games), it asks and shuts it down.
 - 🩺 **Driver repair.** Clears the common WinDivert "1058" error with one click.
 - 🔕 **Quiet mode.** Shows only problem notifications.
 - 📶 **Connection info.** Shows the connection time to Discord and the ByeDPI setting in use.
@@ -251,6 +252,7 @@ I also recommend turning on **"Minimize to tray"** in the same place.
 | **ByeDPI ayarını otomatik bul** | Find ByeDPI setting | Tests the connection; if it fails, tries other settings and saves the one that works |
 | **Güncellemeleri denetle** | Check for updates | Checks GitHub for a new version right away. The launcher also does this 30 seconds after starting and every 6 hours. |
 | **Kayıtları aç** | Open log | Opens the event log (`baslatici.log`) in Notepad |
+| **Arka plandaki GoodbyeDPI'ı kapat** | Close background GoodbyeDPI | Finds and stops GoodbyeDPI services and programs the launcher didn't start. The launcher also checks this at startup and every 30 seconds. |
 | **Sürücü hatasını onar** | Repair driver | Clears the WinDivert driver registration and offers a restart |
 | **DNS → DNS ayarını kontrol et / yap** | Check / set up DNS | Checks whether DNS resolves Discord correctly; switches to encrypted DNS if needed |
 | **DNS → Eski haline döndür** | Restore previous | Restores your DNS settings from before the launcher changed them |
@@ -299,6 +301,7 @@ When autostart is turned on, a small **finder** script is placed in `%LocalAppDa
 | `sessiz_mod.txt` | `byedpi\` | If present, quiet mode is on |
 | `baslatici.log` | `byedpi\` | Event log: connection drops, automatic fixes and errors. Open it with **"Kayıtları aç"** (Open log) in the menu. |
 | `dns_sorma.txt` | `byedpi\` | If present, the DNS question isn't asked at startup |
+| `dis_goodbyedpi_kapat.txt` | `byedpi\` | If present, other GoodbyeDPI instances are closed without asking |
 | `dns_yedek.json` | `%LocalAppData%\DiscordBaslatici\` | Your DNS settings before the launcher changed them |
 | `bulucu.ps1` | `%LocalAppData%\DiscordBaslatici\` | The finder script used at startup |
 | `yol.txt` | `%LocalAppData%\DiscordBaslatici\` | The launcher's last known location |

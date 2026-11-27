@@ -101,6 +101,7 @@ Güncelleme kontrolünün bittiği şu yollardan biriyle anlaşılıyor:
 - 🔁 **Discord proxy'siz açılırsa** (örneğin büyük bir güncellemeden sonra) bunu fark edip doğru ayarla yeniden açıyor.
 - 🚀 **Bilgisayar açılınca başlatma.** Yönetici izni sormadan, Discord tepsiye küçülmüş olarak başlıyor.
 - 📁 **Klasörün adını değiştirsen ya da taşısan da** açılışta çalışmaya devam ediyor.
+- 🚫 **Arka plandaki başka GoodbyeDPI'ları yakalıyor.** Başka bir paketle servis olarak kurulmuş ya da başka klasörden çalışan bir GoodbyeDPI varsa (oyunlarla çakışır) sorup kapatıyor.
 - 🩺 **Sürücü hatasını onarma.** Sık görülen WinDivert "1058" hatasını tek tıkla temizliyor.
 - 🔕 **Sessiz mod.** Sadece sorun bildirimlerini gösteriyor.
 - 📶 **Bağlantı bilgisi.** Discord'a bağlanma süresini ve kullanılan ByeDPI ayarını gösteriyor.
@@ -249,6 +250,7 @@ Başlatıcı simgesine **sol tıklayınca** tepsideki Discord penceresi öne gel
 | **ByeDPI ayarını otomatik bul** | Bağlantıyı test eder, çalışmıyorsa diğer ayarları deneyip çalışanı kaydeder |
 | **Güncellemeleri denetle** | GitHub'da yeni sürüm olup olmadığına hemen bakar. Başlatıcı bunu açıldıktan 30 saniye sonra ve sonra 6 saatte bir kendisi de yapıyor. |
 | **Kayıtları aç** | Olay kayıtlarını (`baslatici.log`) Not Defteri'nde açar |
+| **Arka plandaki GoodbyeDPI'ı kapat** | Başlatıcının açmadığı GoodbyeDPI servislerini ve programlarını bulup kapatır. Başlatıcı bunu açılışta ve 30 saniyede bir kendisi de kontrol ediyor. |
 | **Sürücü hatasını onar** | WinDivert sürücü kaydını temizler, yeniden başlatma önerir |
 | **DNS → DNS ayarını kontrol et / yap** | DNS'in Discord'u doğru adrese çözüp çözmediğine bakar, gerekirse şifreli DNS'e geçirir |
 | **DNS → Eski haline döndür** | DNS ayarını başlatıcı değiştirmeden önceki haline getirir |
@@ -297,6 +299,7 @@ Otomatik başlatma açıldığında `%LocalAppData%\DiscordBaslatici\` klasörü
 | `sessiz_mod.txt` | `byedpi\` | Varsa sessiz mod açık |
 | `baslatici.log` | `byedpi\` | Olay kayıtları: bağlantı kopmaları, otomatik düzeltmeler ve hatalar. Menüden **"Kayıtları aç"** ile açılır. |
 | `dns_sorma.txt` | `byedpi\` | Varsa açılışta DNS ayarı sorulmaz |
+| `dis_goodbyedpi_kapat.txt` | `byedpi\` | Varsa arka plandaki başka GoodbyeDPI'lar sorulmadan kapatılır |
 | `dns_yedek.json` | `%LocalAppData%\DiscordBaslatici\` | Başlatıcı değiştirmeden önceki DNS ayarın |
 | `bulucu.ps1` | `%LocalAppData%\DiscordBaslatici\` | Otomatik başlatmada başlatıcıyı bulan betik |
 | `yol.txt` | `%LocalAppData%\DiscordBaslatici\` | Başlatıcının son bilinen yeri |

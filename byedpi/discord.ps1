@@ -277,6 +277,82 @@ function GoodbyeDpiAc {
     return [bool](Get-Process goodbyedpi)
 }
 
+# --- Arka planda çalışan başka GoodbyeDPI'lar ---
+
+# Bu başlatıcının açmadığı GoodbyeDPI'ları bul: servis olarak kurulanlar ve başka klasörden çalışanlar
+function DisGoodbyeDpiBul {
+    $sonuc = @()
+    $servisler = @(Get-CimInstance Win32_Service | Where-Object { $_.PathName -match 'goodbyedpi' -or $_.Name -match '^goodbyedpi' })
+    foreach ($sv in $servisler) {
+        if ($sv.State -eq 'Running' -or $sv.StartMode -eq 'Auto') {
+            $sonuc += [PSCustomObject]@{ Tur = 'servis'; Ad = $sv.Name; Id = $null }
+        }
+    }
+    $bizimki = [System.IO.Path]::GetFullPath($script:gdpiExe)
+    foreach ($islem in @(Get-Process goodbyedpi)) {
+        $yol = $islem.Path
+        if (-not $yol -or [System.IO.Path]::GetFullPath($yol) -ne $bizimki) {
+            $ad = if ($yol) { $yol } else { 'goodbyedpi.exe' }
+            $sonuc += [PSCustomObject]@{ Tur = 'program'; Ad = "$ad (PID $($islem.Id))"; Id = $islem.Id }
+        }
+    }
+    return ,$sonuc
+}
+
+# Bulunanları kapat. Servislerin otomatik başlaması da kapatılır (geri açmak için: services.msc).
+function DisGoodbyeDpiKapat($liste) {
+    foreach ($x in $liste) {
+        if ($x.Tur -eq 'servis') {
+            Stop-Service -Name $x.Ad -Force
+            Set-Service -Name $x.Ad -StartupType Disabled
+            Kaydet "Arka plandaki GoodbyeDPI servisi durduruldu ve otomatik başlaması kapatıldı: $($x.Ad)"
+        }
+        else {
+            Stop-Process -Id $x.Id -Force
+            Kaydet "Arka planda çalışan GoodbyeDPI kapatıldı: $($x.Ad)"
+        }
+    }
+    Start-Sleep -Seconds 1
+    # Bizim GoodbyeDPI'ımız da çalışmıyorsa sürücüyü de kapat
+    if (-not (Get-Process goodbyedpi)) { sc.exe stop WinDivert | Out-Null }
+}
+
+# Arka planda başka GoodbyeDPI var mı bak; varsa sor (ya da önceden "hep kapat" dendiyse sormadan kapat).
+# $Elle: menüden istendi; hiçbir şey bulunmazsa da bildir, daha önce "hayır" dendiyse yine sor.
+function DisGoodbyeDpiKontrol([switch]$Elle) {
+    $liste = DisGoodbyeDpiBul
+    if ($liste.Count -eq 0) {
+        if ($Elle) { Bildirim 'Bulunamadı' 'Arka planda başka bir GoodbyeDPI çalışmıyor.' }
+        return
+    }
+
+    if (Test-Path $script:disGdpiOtomatikDosya) {
+        DisGoodbyeDpiKapat $liste
+        Bildirim 'Arka plandaki GoodbyeDPI kapatıldı' "Oyunlarla çakışmaması için kapatıldı: $(($liste | ForEach-Object { $_.Ad }) -join ', ')" 'Warning'
+        return
+    }
+
+    # Bu oturumda zaten "hayır" dendiyse kendiliğinden tekrar sorma
+    if (-not $Elle -and $script:disGdpiReddedildi) { return }
+
+    $adlar = ($liste | ForEach-Object { "  • $($_.Tur): $($_.Ad)" }) -join "`n"
+    $cevap = [MesajKutusu]::Goster(
+        "Arka planda bu başlatıcının açmadığı bir GoodbyeDPI çalışıyor:`n`n$adlar`n`n" +
+        "Bu, oyunlarla çakışmaya (oyunun açılmaması / çökmesi) yol açabilir.`n`n" +
+        "Kapatılsın mı? Servisse, bilgisayar açılınca kendiliğinden başlaması da kapatılır.`n" +
+        "Evet dersen bu seçim hatırlanır, bir dahakine sormadan kapatılır.",
+        'Discord Başlatıcı', 'YesNo', 'Warning')
+    if ($cevap -eq 'Yes') {
+        Set-Content -Path $script:disGdpiOtomatikDosya -Value '1' -Encoding ASCII
+        DisGoodbyeDpiKapat $liste
+        Bildirim 'Kapatıldı' 'Arka plandaki GoodbyeDPI kapatıldı.'
+    }
+    else {
+        $script:disGdpiReddedildi = $true
+        Kaydet "Arka planda başka GoodbyeDPI var, kullanıcı kapatmak istemedi: $(($liste | ForEach-Object { $_.Ad }) -join ', ')"
+    }
+}
+
 # WinDivert sürücü kaydını temizle (1058 gibi hatalar için), yeniden başlatma öner
 function SurucuOnar {
     Get-Process goodbyedpi | Stop-Process -Force
@@ -740,6 +816,7 @@ $script:blacklist    = Join-Path $gdpiAna 'discord.txt'
 $script:ayarDosyasi  = Join-Path $klasor 'byedpi_ayar.txt'
 $script:sessizDosya  = Join-Path $klasor 'sessiz_mod.txt'
 $script:dnsSormaDosyasi = Join-Path $klasor 'dns_sorma.txt'
+$script:disGdpiOtomatikDosya = Join-Path $klasor 'dis_goodbyedpi_kapat.txt'
 $script:dnsYedekDosyasi = Join-Path $script:sabitKlasor 'dns_yedek.json'
 $script:log          = Join-Path $env:TEMP 'discord_baslat.log'
 $script:logHat       = Join-Path $env:TEMP 'discord_baslat_hata.log'
@@ -892,6 +969,10 @@ $kayitOgesi.add_Click({
 })
 $menu.Items.Add($kayitOgesi) | Out-Null
 
+$disGdpiOgesi = New-Object System.Windows.Forms.ToolStripMenuItem("Arka plandaki GoodbyeDPI'ı kapat")
+$disGdpiOgesi.add_Click({ DisGoodbyeDpiKontrol -Elle })
+$menu.Items.Add($disGdpiOgesi) | Out-Null
+
 $onarOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Sürücü hatasını onar')
 $onarOgesi.add_Click({ SurucuOnar })
 $menu.Items.Add($onarOgesi) | Out-Null
@@ -1018,6 +1099,10 @@ if (-not (DnsDogruMu)) {
 
 ByeDpiAc
 
+# Arka planda başka bir GoodbyeDPI (servis vb.) çalışıyorsa önce onu hallet
+Durum 'arka plan kontrol ediliyor'
+DisGoodbyeDpiKontrol
+
 Durum 'GoodbyeDPI açılıyor'
 if (-not (GoodbyeDpiAc)) {
     Renk 'kirmizi'
@@ -1137,6 +1222,11 @@ $zamanlayici.add_Tick({
         if ($script:sayac % 3 -eq 0) {
             if (Get-Process Discord) { $script:yok = 0 } else { $script:yok++ }
             if ($script:yok -ge 2) { Bitir; return }
+        }
+
+        # 30 saniyede bir arka planda başka GoodbyeDPI açılmış mı bak
+        if ($script:sayac % 30 -eq 15) {
+            DisGoodbyeDpiKontrol
         }
 
         # Hazır olduktan 30 saniye sonra ve sonra her 6 saatte bir güncelleme kontrolü
