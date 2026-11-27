@@ -1,5 +1,7 @@
 # Jerb-DpiDiscord
 
+**🇹🇷 Türkçe** | [🇬🇧 English](README.en.md)
+
 **Discord Başlatıcı:** Türkiye'de erişim engeli bulunan Discord'u, **oyunlarla çakışmadan** kullanmanı sağlayan, sistem tepsisinde çalışan küçük bir Windows aracı.
 
 ByeDPI ve GoodbyeDPI'ı birlikte, her birini en uygun olduğu anda kullanır. Discord açılırken güncelleme kontrolünü GoodbyeDPI ile geçer, ardından GoodbyeDPI'ı tamamen kapatır ve Discord'u sürücü kullanmayan ByeDPI üzerinden çalıştırmaya devam eder. Böylece Discord açıkken oyun oynayabilirsin. Ağ sürücüsüne hassas olan hile koruma sistemleri ya da oyun hızlandırıcı programlar (ping düşürücüler) bundan etkilenmez.
@@ -20,9 +22,11 @@ ByeDPI ve GoodbyeDPI'ı birlikte, her birini en uygun olduğu anda kullanır. Di
 - [Oluşturulan dosyalar](#oluşturulan-dosyalar)
 - [Sorun giderme](#sorun-giderme)
 - [Sık sorulan sorular](#sık-sorulan-sorular)
+- [Güvenlik ve doğrulama](#güvenlik-ve-doğrulama)
 - [Kaldırma](#kaldırma)
 - [Teşekkürler](#teşekkürler)
 - [Lisans](#lisans)
+- [Destek ol](#destek-ol)
 - [Sorumluluk reddi](#sorumluluk-reddi)
 
 ---
@@ -132,6 +136,7 @@ JerbDpiDiscord\
 ├── Baslat.bat
 ├── LICENSE
 ├── README.md
+├── README.en.md
 ├── byedpi\
 │   ├── ciadpi.exe               ← ByeDPI 17.3 (64 bit)
 │   ├── discord.ps1        ← başlatıcının kendisi
@@ -225,6 +230,7 @@ Başlatıcı simgesine **sol tıklayınca** tepsideki Discord penceresi öne gel
 | Seçenek | Ne yapar |
 |---|---|
 | **Jerb-DpiDiscord GitHub** | Bu projenin GitHub sayfasını tarayıcıda açar |
+| **Destek ol (bağış)** | Projeyi desteklemek için GitHub Sponsors sayfasını açar |
 | **Durum** | Şu anda ne olduğunu gösterir (güncelleme bekleniyor, çalışıyor, vb.) |
 | **Bağlantı süresi** | Discord'a ByeDPI üzerinden bağlanmanın kaç ms sürdüğü. Menü her açıldığında yeniden ölçülür. |
 | **ByeDPI ayarı** | Şu anda kullanılan ByeDPI parametreleri |
@@ -332,7 +338,7 @@ Güncelleme kontrolü 2 dakika içinde bitmemiş. Bu durumda GoodbyeDPI güvenli
 
 - `Baslat.bat` dosyasının `byedpi` klasörünün **yanında** olduğundan emin ol.
 - Windows SmartScreen uyarısı çıkarsa **Ek bilgi → Yine de çalıştır.**
-- Antivirüs programın WinDivert sürücüsünü engelliyor olabilir. GoodbyeDPI klasörünü istisnalara ekle.
+- Antivirüs programın WinDivert sürücüsünü engelliyor olabilir. Bkz. [Antivirüs uyarıları](#antivirüs-uyarıları).
 
 ### "Discord Başlatıcı zaten çalışıyor"
 
@@ -365,6 +371,60 @@ zapret de WinDivert kullandığı için oyunlarla aynı sorunu yaşar. Güncelle
 
 **İnternet sağlayıcım önemli mi?**
 Başlatıcı Türkiye'deki yaygın sağlayıcılarla test edilmek üzere hazırlandı. Engelleme yöntemi sağlayıcıya göre değişebilir. ByeDPI ayarını otomatik bulma özelliği bu yüzden var.
+
+---
+
+## Güvenlik ve doğrulama
+
+Başlatıcı yönetici yetkisiyle çalışıyor, bir ağ sürücüsünü yüklüyor ve istersen DNS ayarını değiştiriyor. Bu yüzden ne yaptığını bilmen önemli. Projenin açık kaynak olmasının en büyük faydası da bu.
+
+### Kodu kendin incele
+
+Başlatıcının tamamı düz metin dosyalarından oluşuyor, derlenmiş gizli bir kısmı yok:
+- `Baslat.bat`: sadece `discord.ps1` dosyasını gizli pencerede başlatıyor.
+- `byedpi/discord.ps1`: her şeyi yapan betik. Not Defteri ile açıp her satırını okuyabilirsin. Kod Türkçe açıklamalarla yazıldı.
+
+Başlatıcı internete sadece şunlar için bağlanıyor: Discord'un kendi sunucuları (bağlantı testi ve Discord kurulumu indirme) ve DNS ayarında Cloudflare (1.1.1.1). Hiçbir veri toplamıyor, hiçbir yere bir şey göndermiyor.
+
+### Program dosyalarını doğrula (SHA-256)
+
+Depodaki `.exe`, `.dll` ve `.sys` dosyaları okunabilir kod değil. Bunların resmi ByeDPI ve GoodbyeDPI dosyalarıyla aynı olduğunu kendin doğrulayabilirsin. Depodaki dosyaların SHA-256 özetleri:
+
+| Dosya | Kaynağı | SHA-256 |
+|---|---|---|
+| `byedpi/ciadpi.exe` | ByeDPI 17.3, `byedpi-17.3-x86_64-w64.zip` | `eb53ceeeb981cc6735ac24bb1e51e725280b86630e80fdf19ddc4ee4a5b54ef4` |
+| `goodbyedpi/goodbyedpi.exe` | GoodbyeDPI 0.2.3rc3, `x86_64` | `8d412b094bb9c137ff25ba9a794d1122ecc84bb776debff6c249723a13cc31cd` |
+| `goodbyedpi/WinDivert.dll` | GoodbyeDPI 0.2.3rc3, `x86_64` | `6110bfa44667405179c3e15e12af1b62037e447ed59b054b19042032995e6c7e` |
+| `goodbyedpi/WinDivert64.sys` | GoodbyeDPI 0.2.3rc3, `x86_64` | `e69b5ba3f0cd6cfb2983e442636e7f0b342b61b15264b0328317d4559c82cf50` |
+
+**Nasıl kontrol edilir:**
+1. Depodaki dosyanın özetini hesapla. PowerShell'de:
+   ```powershell
+   Get-FileHash .\byedpi\ciadpi.exe -Algorithm SHA256
+   ```
+   ya da komut isteminde:
+   ```bat
+   certutil -hashfile byedpi\ciadpi.exe SHA256
+   ```
+2. Aynı sürümü resmi sayfadan ([ByeDPI](https://github.com/hufrea/byedpi/releases), [GoodbyeDPI](https://github.com/ValdikSS/GoodbyeDPI/releases)) indirip onun da özetini hesapla.
+3. İki özet birebir aynıysa dosya aynıdır, değiştirilmemiştir.
+
+Özetler eşleşmiyorsa ya da içine güvenmiyorsan, bu dosyaları sil ve resmi sayfalardan indirdiğin dosyaları aynı yerlere koy. Başlatıcı onlarla da aynı şekilde çalışır.
+
+> Projeyi sadece **bu depodan** indir. Başka sitelerde ya da kopyalanmış (fork) depolarda paylaşılan sürümler değiştirilmiş olabilir.
+
+### Antivirüs uyarıları
+
+Bazı antivirüs programları (Windows Defender dahil) bu projedeki dosyaları **şüpheli** olarak işaretleyebilir. Bunun nedenleri:
+
+- **WinDivert** sürücüsü ağ trafiğine çekirdek seviyesinde müdahale ediyor. Aynı sürücü bazı zararlı yazılımlarda da kullanıldığı için antivirüsler sürücünün kendisini işaretleyebiliyor. WinDivert'in kendisi açık kaynak ve meşru bir araç.
+- **DPI aşma araçları** (GoodbyeDPI, ByeDPI) ağ paketlerini değiştirdiği için bazı antivirüslerde "HackTool" ya da "RiskWare" gibi genel bir uyarıyla görünebiliyor. Bu bir virüs olduğu anlamına gelmiyor, "bu araç ağ trafiğini değiştiriyor" demek.
+- **Gizli çalışan PowerShell betiği** ve **yönetici yetkisi isteyen** bir `.bat` dosyası da bazı güvenlik programlarına şüpheli görünebiliyor.
+
+**Ne yapmalı:**
+1. Önce yukarıdaki SHA-256 özetleriyle dosyaları doğrula.
+2. İstersen dosyaları [VirusTotal](https://www.virustotal.com/)'e yükleyip onlarca antivirüsün sonucunu birlikte görebilirsin. Birkaç antivirüsün "HackTool" demesi bu tür araçlar için normal.
+3. Güveniyorsan proje klasörünü antivirüsünün **istisnalar** listesine ekle. Windows Defender'da: **Windows Güvenliği → Virüs ve tehdit koruması → Ayarları yönet → Dışlamalar → Dışlama ekle → Klasör.**
 
 ---
 
@@ -413,6 +473,18 @@ Kısaca:
 - ⚠️ Yazılım hiçbir garanti olmadan sunulur.
 
 Depoya eklenen ByeDPI, GoodbyeDPI ve WinDivert bu lisansın kapsamında değildir. Her biri kendi lisansına tabidir (bkz. [Teşekkürler](#teşekkürler)).
+
+---
+
+## Destek ol
+
+Bu proje ücretsiz ve öyle kalacak. İşine yaradıysa ve desteklemek istersen:
+
+- 💖 [**GitHub Sponsors ile bağış yap**](https://github.com/sponsors/erendmrbs)
+- ⭐ Depoya **yıldız** ver, daha çok kişiye ulaşsın.
+- 🐛 Bir sorun bulursan ya da bir fikrin varsa [**Issues**](https://github.com/erendmrbs/JerbDpiDiscord/issues) kısmından bildir.
+
+Bağış sayfasına tepsi menüsündeki **"Destek ol (bağış)"** seçeneğinden de ulaşabilirsin.
 
 ---
 

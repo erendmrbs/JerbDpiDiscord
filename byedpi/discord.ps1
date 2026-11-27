@@ -17,6 +17,7 @@ param([switch]$Gizli)
 
 # Projenin GitHub sayfası (tepsi menüsünün en üstündeki bağlantı)
 $GITHUB_ADRESI = 'https://github.com/erendmrbs/JerbDpiDiscord'
+$BAGIS_ADRESI  = 'https://github.com/sponsors/erendmrbs'
 
 $ErrorActionPreference = 'SilentlyContinue'
 $ProgressPreference    = 'SilentlyContinue'
@@ -581,6 +582,10 @@ $githubOgesi.add_Click({
     Start-Process explorer.exe $GITHUB_ADRESI
 })
 $menu.Items.Add($githubOgesi) | Out-Null
+
+$bagisOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Destek ol (bağış)')
+$bagisOgesi.add_Click({ Start-Process explorer.exe $BAGIS_ADRESI })
+$menu.Items.Add($bagisOgesi) | Out-Null
 $menu.Items.Add((New-Object System.Windows.Forms.ToolStripSeparator)) | Out-Null
 
 $script:durumOgesi = New-Object System.Windows.Forms.ToolStripMenuItem('Durum: başlatılıyor')
