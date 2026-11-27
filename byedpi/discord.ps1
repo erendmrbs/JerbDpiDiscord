@@ -373,11 +373,16 @@ function DiscordBaslat([switch]$Kucuk) {
     Durum 'güncelleme bekleniyor'
 }
 
-# Proxy'siz çalışan ana Discord işlemi var mı?
+# Discord proxy'siz mi çalışıyor?
+# Bizim açtığımız (proxy'li) ana Discord işlemi hâlâ çalışıyorsa $false döner: Discord bildirimine
+# tıklamak gibi durumlarda Windows bir anlığına proxy'siz ikinci bir kopya açıyor, o kopya açık olan
+# Discord'a pencereyi göstermesini söyleyip kapanıyor. Bunu "proxy'siz açılmış" sanmamak gerekiyor.
 function ProxysizDiscordVarMi {
-    $ana = Get-CimInstance Win32_Process -Filter "Name='Discord.exe'" |
-           Where-Object { $_.CommandLine -and $_.CommandLine -notmatch '--type=' }
-    return [bool]($ana | Where-Object { $_.CommandLine -notmatch '--proxy-server' })
+    $ana = @(Get-CimInstance Win32_Process -Filter "Name='Discord.exe'" |
+             Where-Object { $_.CommandLine -and $_.CommandLine -notmatch '--type=' })
+    if ($ana.Count -eq 0) { return $false }
+    if ($ana | Where-Object { $_.CommandLine -match '--proxy-server' }) { return $false }
+    return $true
 }
 
 # Discord ByeDPI üzerinden bağlantı kurdu mu? (pencere gizliyken kullanılır)
@@ -1052,8 +1057,16 @@ $zamanlayici.add_Tick({
             Bildirim 'ByeDPI yeniden başlatıldı' 'ByeDPI kapanmıştı, tekrar açıldı.' 'Warning'
         }
 
-        # Discord kendini proxy'siz açtıysa düzelt (başlatmadan sonraki ilk 15 saniye hariç)
+        # Discord kendini proxy'siz açtıysa düzelt (başlatmadan sonraki ilk 15 saniye hariç).
+        # Anlık kopyalara takılmamak için üst üste iki kontrolde (yaklaşık 6 sn) görülmesi gerekiyor.
         if (((Get-Date) - $script:sonBaslatma).TotalSeconds -gt 15 -and (ProxysizDiscordVarMi)) {
+            $script:proxysizSayac++
+        }
+        else {
+            $script:proxysizSayac = 0
+        }
+        if ($script:proxysizSayac -ge 2) {
+            $script:proxysizSayac = 0
             Kaydet "Discord proxy'siz açılmış bulundu, yeniden başlatılıyor"
             Bildirim "Discord proxy'siz açılmıştı" 'ByeDPI ile yeniden açılıyor...' 'Warning'
             DiscordBaslat
